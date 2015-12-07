@@ -60,10 +60,10 @@ class _TetrAMMTemplate(AutoSubstitution, Device):
 class TetrAMM(_QuadEM):
     _SpecificTemplate = _TetrAMMTemplate
     def __init__(self, QSIZE = 20, RING_SIZE = 10000,
-                 IP = "164.54.160.241:10001", **args):
+            IP = "172.23.253.12:10001", **args):
          # # Make an asyn IP port
         self.ip = AsynIP(IP, name = args["PORT"] + "ip",
-            input_eos = "\r\n", output_eos = "\r\n")
+            input_eos = "\r\n", output_eos = "\r")
         self.__super.__init__(**args)
         self.__dict__.update(locals())
 

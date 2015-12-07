@@ -13,14 +13,8 @@ LIBRARY_IOC += quadEM
 DBD += drvAPS_EM.dbd
 DBD += drvAHxxx.dbd
 DBD += drvTetrAMM.dbd
-<<<<<<< HEAD
 #DBD += quadEMTestApp.dbd
 #DBD += quadEMTestAppVx.dbd
-=======
-DBD += drvNSLS_EM.dbd
-DBD += quadEMTestApp.dbd
-DBD += quadEMTestAppVx.dbd
->>>>>>> f475b6ed936311216b4a4b797a49f6d406e38f91
 
 INC += drvQuadEM.h
 
@@ -28,7 +22,6 @@ INC += drvQuadEM.h
 quadEM_SRCS         += drvQuadEM.cpp
 quadEM_SRCS         += drvAHxxx.cpp
 quadEM_SRCS         += drvTetrAMM.cpp
-quadEM_SRCS         += drvNSLS_EM.cpp
 quadEM_SRCS         += quadEM_SNL.st
 quadEM_SRCS         += four1.c
 #quadEM_SRCS_vxWorks += drvAPS_EM.cpp
