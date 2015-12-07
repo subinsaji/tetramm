@@ -18,6 +18,7 @@ DB += AH501.template
 DB += AH401B.template
 DB += quadEM_TimeSeries.template
 DB += TetrAMM.template
+DB += quadEM.template
 
 #----------------------------------------------------
 # If <anyname>.db template is not named <anyname>*.template add

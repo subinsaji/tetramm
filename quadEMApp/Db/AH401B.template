@@ -9,6 +9,7 @@
 
 # This associates the template with an edm screen
 # % guiTODO, $(PORT), edmtab, AH401B.edl, P=$(P),R=$(R)
+include "quadEM.template"
 
 # We replace the choices for the Range and the range of the IntegrationTime
 record(mbbo,"$(P)$(R)Range") {

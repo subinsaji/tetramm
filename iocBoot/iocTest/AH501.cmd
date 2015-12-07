@@ -1,11 +1,3 @@
-errlogInit(5000)
-< envPaths
-
-# Tell EPICS all about the record types, device-support modules, drivers,
-# etc. in this build
-dbLoadDatabase("../../dbd/quadEMTestApp.dbd")
-quadEMTestApp_registerRecordDeviceDriver(pdbbase)
-
 epicsEnvSet("PREFIX",    "quadEMTest:")
 epicsEnvSet("RECORD",    "AH501")
 epicsEnvSet("PORT",      "AH501")
@@ -15,7 +7,9 @@ epicsEnvSet("QSIZE",     "20")
 epicsEnvSet("RING_SIZE", "10000")
 epicsEnvSet("TSPOINTS",  "1000")
 epicsEnvSet("IP",        "164.54.160.240:10001")
-< st.cmd.AHxxx
+
+< AHxxx.cmd
+dbLoadRecords("$(QUADEM)/db/AH501.template", "P=$(PREFIX), R=$(RECORD):, PORT=$(PORT)")
 
 < saveRestore.cmd
 
