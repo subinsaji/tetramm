@@ -136,11 +136,13 @@ asynStatus drvTetrAMM::writeReadMeter()
   asynStatus status;
   int eomReason;
   //const char *functionName="writeReadMeter";
-  
+    
   status = pasynOctetSyncIO->writeRead(pasynUserMeter_, outString_, strlen(outString_), 
-                                       inString_, sizeof(inString_), TetrAMM_TIMEOUT, 
-                                       &nwrite, &nread, &eomReason);      
+					inString_, sizeof(inString_), TetrAMM_TIMEOUT, 
+					&nwrite, &nread, &eomReason);   
+
   return status;
+
 }
 
 inline void swapDouble(char *in)
@@ -436,7 +438,7 @@ asynStatus drvTetrAMM::setAcquire(epicsInt32 value)
             // Now do flush and read with short timeout to flush any responses
             nread = 0;
             readStatus = pasynOctetSyncIO->flush(pasynUserMeter_);
-            readStatus = pasynOctetSyncIO->read(pasynUserMeter_, dummyIn, MAX_COMMAND_LEN, 0.1, 
+            readStatus = pasynOctetSyncIO->read(pasynUserMeter_, dummyIn, MAX_COMMAND_LEN, 0.5, 
                                                 &nread, &eomReason);
             asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, 
                 "%s::%s readStatus=%d, nread=%lu\n", 
