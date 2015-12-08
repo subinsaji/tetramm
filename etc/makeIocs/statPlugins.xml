@@ -11,4 +11,19 @@
 	<ADCore.NDStats ADDR="0" BUFFERS="$(BUFFERS=50)" Enabled="1" HIST_SIZE="$(HIST_SIZE=256)" NCHANS="$(STAT_NCHAN)" NDARRAY_ADDR="8" NDARRAY_PORT="$(NDARRAY_PORT)" P="$(P)" PORT="$(PORTPREFIX).DiffY" QUEUE="$(QUEUE=16)" R=":DiffY:" TIMEOUT="1" XSIZE="$(STAT_XSIZE)" YSIZE="0"/>
 	<ADCore.NDStats ADDR="0" BUFFERS="$(BUFFERS=50)" Enabled="1" HIST_SIZE="$(HIST_SIZE=256)" NCHANS="$(STAT_NCHAN)" NDARRAY_ADDR="9" NDARRAY_PORT="$(NDARRAY_PORT)" P="$(P)" PORT="$(PORTPREFIX).PosX" QUEUE="$(QUEUE=16)" R=":PosX:" TIMEOUT="1" XSIZE="$(STAT_XSIZE)" YSIZE="0"/>
 	<ADCore.NDStats ADDR="0" BUFFERS="$(BUFFERS=50)" Enabled="1" HIST_SIZE="$(HIST_SIZE=256)" NCHANS="$(STAT_NCHAN)" NDARRAY_ADDR="10" NDARRAY_PORT="$(NDARRAY_PORT)" P="$(P)" PORT="$(PORTPREFIX).PosY" QUEUE="$(QUEUE=16)" R=":PosY:" TIMEOUT="1" XSIZE="$(STAT_XSIZE)" YSIZE="0"/>
+	<records.ao PREC="6" record="$(P):Current2:Sigma_RBV"/>
+	<records.ao PREC="6" record="$(P):Current3:Sigma_RBV"/>
+	<records.ao PREC="6" record="$(P):Current1:Sigma_RBV"/>
+	<records.ao PREC="6" record="$(P):Current4:Sigma_RBV"/>
+	<records.ao PREC="4" record="$(P):PosY:$(P):SumX:MeanValue_RBV"/>
+	<records.ao PREC="4" record="$(P):PosX:$(P):SumX:MeanValue_RBV"/>
+	<records.ao PREC="4" record="$(P):DiffY:$(P):SumX:MeanValue_RBV"/>
+	<records.ao PREC="4" record="$(P):DiffX:$(P):SumX:MeanValue_RBV"/>
+	<records.ao PREC="4" record="$(P):SumAll:$(P):SumX:MeanValue_RBV"/>
+	<records.ao PREC="4" record="$(P):SumY:$(P):SumX:MeanValue_RBV"/>
+	<records.ao PREC="4" record="$(P):SumX:MeanValue_RBV"/>
+	<records.ao PREC="6" record="$(P):Current2:MeanValue_RBV"/>
+	<records.ao PREC="6" record="$(P):Current3:MeanValue_RBV"/>
+	<records.ao PREC="6" record="$(P):Current1:MeanValue_RBV"/>
+	<records.ao PREC="6" record="$(P):Current4:MeanValue_RBV"/>
 </components>
