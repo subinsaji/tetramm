@@ -3,10 +3,10 @@ beginScreenProperties
 major 4
 minor 0
 release 1
-x 1180
-y 204
-w 395
-h 820
+x 559
+y 169
+w 393
+h 824
 font "arial-bold-r-12.0"
 ctlFont "arial-bold-r-12.0"
 btnFont "arial-bold-r-12.0"
@@ -694,7 +694,9 @@ x 85
 y 405
 w 70
 h 20
-controlPv "$(P):Current1:MeanValue_RBV"
+controlPv "$(P)$(R)Current1:MeanValue_RBV"
+displayMode "exp"
+precision 1
 fgColor index 16
 fgAlarm
 bgColor index 10
@@ -732,7 +734,9 @@ x 85
 y 430
 w 70
 h 20
-controlPv "$(P):Current1:Sigma_RBV"
+controlPv "$(P)$(R)Current1:Sigma_RBV"
+displayMode "exp"
+precision 1
 fgColor index 16
 fgAlarm
 bgColor index 10
@@ -770,7 +774,9 @@ x 160
 y 430
 w 70
 h 20
-controlPv "$(P):Current2:Sigma_RBV"
+controlPv "$(P)$(R)Current2:Sigma_RBV"
+displayMode "exp"
+precision 1
 fgColor index 16
 fgAlarm
 bgColor index 10
@@ -789,7 +795,9 @@ x 235
 y 430
 w 70
 h 20
-controlPv "$(P):Current3:Sigma_RBV"
+controlPv "$(P)$(R)Current3:Sigma_RBV"
+displayMode "exp"
+precision 1
 fgColor index 16
 fgAlarm
 bgColor index 10
@@ -808,7 +816,9 @@ x 310
 y 430
 w 70
 h 20
-controlPv "$(P):Current4:Sigma_RBV"
+controlPv "$(P)$(R)Current4:Sigma_RBV"
+displayMode "exp"
+precision 1
 fgColor index 16
 fgAlarm
 bgColor index 10
@@ -827,7 +837,9 @@ x 160
 y 405
 w 70
 h 20
-controlPv "$(P):Current2:MeanValue_RBV"
+controlPv "$(P)$(R)Current2:MeanValue_RBV"
+displayMode "exp"
+precision 1
 fgColor index 16
 fgAlarm
 bgColor index 10
@@ -846,7 +858,9 @@ x 235
 y 405
 w 70
 h 20
-controlPv "$(P):Current3:MeanValue_RBV"
+controlPv "$(P)$(R)Current3:MeanValue_RBV"
+displayMode "exp"
+precision 1
 fgColor index 16
 fgAlarm
 bgColor index 10
@@ -865,7 +879,9 @@ x 310
 y 405
 w 70
 h 20
-controlPv "$(P):Current4:MeanValue_RBV"
+controlPv "$(P)$(R)Current4:MeanValue_RBV"
+displayMode "exp"
+precision 1
 fgColor index 16
 fgAlarm
 bgColor index 10
@@ -961,7 +977,7 @@ onColor index 3
 offColor index 3
 topShadowColor index 1
 botShadowColor index 11
-controlPv "$(P)$(R)CompCurrOffset1.PROC"
+controlPv "$(P)$(R)ComputeCurrentOffset1.PROC"
 pressValue "1"
 onLabel "Compute"
 offLabel "Compute"
@@ -984,7 +1000,7 @@ onColor index 3
 offColor index 3
 topShadowColor index 1
 botShadowColor index 11
-controlPv "$(P)$(R)CompCurrOffset2.PROC"
+controlPv "$(P)$(R)ComputeCurrentOffset2.PROC"
 pressValue "1"
 onLabel "Compute"
 offLabel "Compute"
@@ -1007,7 +1023,7 @@ onColor index 3
 offColor index 3
 topShadowColor index 1
 botShadowColor index 11
-controlPv "$(P)$(R)CompCurrOffset3.PROC"
+controlPv "$(P)$(R)ComputeCurrentOffset3.PROC"
 pressValue "1"
 onLabel "Compute"
 offLabel "Compute"
@@ -1030,7 +1046,7 @@ onColor index 3
 offColor index 3
 topShadowColor index 1
 botShadowColor index 11
-controlPv "$(P)$(R)CompCurrOffset4.PROC"
+controlPv "$(P)$(R)ComputeCurrentOffset4.PROC"
 pressValue "1"
 onLabel "Compute"
 offLabel "Compute"
@@ -1163,7 +1179,7 @@ fgColor index 14
 bgColor index 3
 useDisplayBg
 value {
-  "3&4"
+  "Y"
 }
 endObjectProperties
 
@@ -1182,7 +1198,7 @@ fgColor index 14
 bgColor index 3
 useDisplayBg
 value {
-  "1&2"
+  "X"
 }
 endObjectProperties
 
@@ -1201,7 +1217,7 @@ fgColor index 14
 bgColor index 3
 useDisplayBg
 value {
-  "1&2&3&4"
+  "All"
 }
 endObjectProperties
 
@@ -1215,7 +1231,9 @@ x 90
 y 550
 w 70
 h 20
-controlPv "$(P):Sum12:MeanValue_RBV"
+controlPv "$(P)$(R)SumX:MeanValue_RBV"
+displayMode "exp"
+precision 1
 fgColor index 16
 fgAlarm
 bgColor index 10
@@ -1234,7 +1252,9 @@ x 165
 y 550
 w 70
 h 20
-controlPv "$(P):Sum34:MeanValue_RBV"
+controlPv "$(P)$(R)SumY:MeanValue_RBV"
+displayMode "exp"
+precision 1
 fgColor index 16
 fgAlarm
 bgColor index 10
@@ -1253,7 +1273,9 @@ x 240
 y 550
 w 70
 h 20
-controlPv "$(P):Sum1234:MeanValue_RBV"
+controlPv "$(P)$(R)SumAll:MeanValue_RBV"
+displayMode "exp"
+precision 1
 fgColor index 16
 fgAlarm
 bgColor index 10
@@ -1272,7 +1294,9 @@ x 240
 y 575
 w 70
 h 20
-controlPv "$(P):Sum1234:Sigma_RBV"
+controlPv "$(P)$(R)SumAll:Sigma_RBV"
+displayMode "exp"
+precision 1
 fgColor index 16
 fgAlarm
 bgColor index 10
@@ -1291,7 +1315,9 @@ x 165
 y 575
 w 70
 h 20
-controlPv "$(P):Sum34:Sigma_RBV"
+controlPv "$(P)$(R)SumY:Sigma_RBV"
+displayMode "exp"
+precision 1
 fgColor index 16
 fgAlarm
 bgColor index 10
@@ -1310,7 +1336,9 @@ x 90
 y 575
 w 70
 h 20
-controlPv "$(P):Sum12:Sigma_RBV"
+controlPv "$(P)$(R)SumX:Sigma_RBV"
+displayMode "exp"
+precision 1
 fgColor index 16
 fgAlarm
 bgColor index 10
@@ -1329,7 +1357,9 @@ x 165
 y 660
 w 70
 h 20
-controlPv "$(P):Pos34:MeanValue_RBV"
+controlPv "$(P)$(R)PosY:MeanValue_RBV"
+displayMode "exp"
+precision 1
 fgColor index 16
 fgAlarm
 bgColor index 10
@@ -1348,7 +1378,9 @@ x 90
 y 660
 w 70
 h 20
-controlPv "$(P):Pos12:MeanValue_RBV"
+controlPv "$(P)$(R)PosX:MeanValue_RBV"
+displayMode "exp"
+precision 1
 fgColor index 16
 fgAlarm
 bgColor index 10
@@ -1367,7 +1399,9 @@ x 165
 y 685
 w 70
 h 20
-controlPv "$(P):Pos34:Sigma_RBV"
+controlPv "$(P)$(R)PosY:Sigma_RBV"
+displayMode "exp"
+precision 1
 fgColor index 16
 fgAlarm
 bgColor index 10
@@ -1386,7 +1420,9 @@ x 90
 y 685
 w 70
 h 20
-controlPv "$(P):Pos12:Sigma_RBV"
+controlPv "$(P)$(R)PosX:Sigma_RBV"
+displayMode "exp"
+precision 1
 fgColor index 16
 fgAlarm
 bgColor index 10
@@ -1405,7 +1441,7 @@ x 165
 y 710
 w 70
 h 20
-controlPv "$(P)$(R)PositionOffset34"
+controlPv "$(P)$(R)PositionOffsetY"
 fgColor index 25
 fgAlarm
 bgColor index 3
@@ -1423,7 +1459,7 @@ x 90
 y 710
 w 70
 h 20
-controlPv "$(P)$(R)PositionOffset12"
+controlPv "$(P)$(R)PositionOffsetX"
 fgColor index 25
 fgAlarm
 bgColor index 3
@@ -1446,7 +1482,7 @@ onColor index 3
 offColor index 3
 topShadowColor index 1
 botShadowColor index 11
-controlPv "$(P)$(R)CompPosOffset34.PROC"
+controlPv "$(P)$(R)ComputePosOffsetY.PROC"
 pressValue "1"
 onLabel "Compute"
 offLabel "Compute"
@@ -1469,7 +1505,7 @@ onColor index 3
 offColor index 3
 topShadowColor index 1
 botShadowColor index 11
-controlPv "$(P)$(R)CompPosOffset12.PROC"
+controlPv "$(P)$(R)ComputePosOffsetX.PROC"
 pressValue "1"
 onLabel "Compute"
 offLabel "Compute"
@@ -1487,7 +1523,7 @@ x 90
 y 760
 w 70
 h 20
-controlPv "$(P)$(R)PositionScale12"
+controlPv "$(P)$(R)PositionScaleX"
 fgColor index 25
 fgAlarm
 bgColor index 3
@@ -1505,7 +1541,7 @@ x 170
 y 760
 w 70
 h 20
-controlPv "$(P)$(R)PositionScale34"
+controlPv "$(P)$(R)PositionScaleY"
 fgColor index 25
 fgAlarm
 bgColor index 3
@@ -1646,634 +1682,6 @@ value {
 }
 endObjectProperties
 
-# (Group)
-object activeGroupClass
-beginObjectProperties
-major 4
-minor 0
-release 0
-x 10
-y 280
-w 380
-h 90
-
-beginGroup
-
-# (Rectangle)
-object activeRectangleClass
-beginObjectProperties
-major 4
-minor 0
-release 0
-x 10
-y 285
-w 380
-h 85
-lineColor index 14
-fill
-fillColor index 3
-endObjectProperties
-
-# (Static Text)
-object activeXTextClass
-beginObjectProperties
-major 4
-minor 1
-release 1
-x 10
-y 280
-w 96
-h 13
-font "arial-medium-r-12.0"
-fgColor index 14
-bgColor index 5
-value {
-  "  AH401B Driver  "
-}
-autoSize
-border
-endObjectProperties
-
-# (Menu Button)
-object activeMenuButtonClass
-beginObjectProperties
-major 4
-minor 0
-release 0
-x 100
-y 320
-w 95
-h 20
-fgColor index 25
-bgColor index 3
-inconsistentColor index 0
-topShadowColor index 1
-botShadowColor index 11
-controlPv "$(P)$(R)PingPong"
-indicatorPv "$(P)$(R)PingPong_RBV"
-font "arial-bold-r-12.0"
-endObjectProperties
-
-# (Static Text)
-object activeXTextClass
-beginObjectProperties
-major 4
-minor 1
-release 1
-x 20
-y 320
-w 80
-h 20
-font "arial-bold-r-12.0"
-fgColor index 14
-bgColor index 3
-useDisplayBg
-value {
-  "Ping Pong"
-}
-endObjectProperties
-
-# (Static Text)
-object activeXTextClass
-beginObjectProperties
-major 4
-minor 1
-release 1
-x 20
-y 345
-w 80
-h 20
-font "arial-bold-r-12.0"
-fgColor index 14
-bgColor index 3
-useDisplayBg
-value {
-  "Trigger"
-}
-endObjectProperties
-
-# (Menu Button)
-object activeMenuButtonClass
-beginObjectProperties
-major 4
-minor 0
-release 0
-x 100
-y 345
-w 95
-h 20
-fgColor index 25
-bgColor index 3
-inconsistentColor index 0
-topShadowColor index 1
-botShadowColor index 11
-controlPv "$(P)$(R)Trigger"
-indicatorPv "$(P)$(R)Trigger_RBV"
-font "arial-bold-r-12.0"
-endObjectProperties
-
-# (Textupdate)
-object TextupdateClass
-beginObjectProperties
-major 10
-minor 0
-release 0
-x 180
-y 295
-w 55
-h 20
-controlPv "$(P)$(R)IntegrationTime_RBV"
-fgColor index 16
-fgAlarm
-bgColor index 10
-fill
-font "arial-bold-r-12.0"
-fontAlign "center"
-endObjectProperties
-
-# (Static Text)
-object activeXTextClass
-beginObjectProperties
-major 4
-minor 1
-release 1
-x 20
-y 295
-w 110
-h 20
-font "arial-bold-r-12.0"
-fgColor index 14
-bgColor index 3
-useDisplayBg
-value {
-  "Integration Time"
-}
-endObjectProperties
-
-# (Textentry)
-object TextentryClass
-beginObjectProperties
-major 10
-minor 0
-release 0
-x 125
-y 295
-w 55
-h 20
-controlPv "$(P)$(R)IntegrationTime"
-fgColor index 25
-fgAlarm
-bgColor index 3
-fill
-font "arial-bold-r-12.0"
-endObjectProperties
-
-endGroup
-
-visPv "$(P)$(R)Model"
-visMin "2"
-visMax "4"
-endObjectProperties
-
-# (Group)
-object activeGroupClass
-beginObjectProperties
-major 4
-minor 0
-release 0
-x 10
-y 280
-w 380
-h 90
-
-beginGroup
-
-# (Rectangle)
-object activeRectangleClass
-beginObjectProperties
-major 4
-minor 0
-release 0
-x 10
-y 285
-w 380
-h 85
-lineColor index 14
-fill
-fillColor index 3
-endObjectProperties
-
-# (Static Text)
-object activeXTextClass
-beginObjectProperties
-major 4
-minor 1
-release 1
-x 10
-y 280
-w 86
-h 13
-font "arial-medium-r-12.0"
-fgColor index 14
-bgColor index 5
-value {
-  "  AH501 Driver  "
-}
-autoSize
-border
-endObjectProperties
-
-# (Menu Button)
-object activeMenuButtonClass
-beginObjectProperties
-major 4
-minor 0
-release 0
-x 100
-y 295
-w 95
-h 20
-fgColor index 25
-bgColor index 3
-inconsistentColor index 0
-topShadowColor index 1
-botShadowColor index 11
-controlPv "$(P)$(R)NumChannels"
-indicatorPv "$(P)$(R)NumChannels_RBV"
-font "arial-bold-r-12.0"
-endObjectProperties
-
-# (Static Text)
-object activeXTextClass
-beginObjectProperties
-major 4
-minor 1
-release 1
-x 20
-y 295
-w 80
-h 20
-font "arial-bold-r-12.0"
-fgColor index 14
-bgColor index 3
-useDisplayBg
-value {
-  "Channels"
-}
-endObjectProperties
-
-# (Menu Button)
-object activeMenuButtonClass
-beginObjectProperties
-major 4
-minor 0
-release 0
-x 100
-y 320
-w 95
-h 20
-fgColor index 25
-bgColor index 3
-inconsistentColor index 0
-topShadowColor index 1
-botShadowColor index 11
-controlPv "$(P)$(R)Resolution"
-indicatorPv "$(P)$(R)Resolution_RBV"
-font "arial-bold-r-12.0"
-endObjectProperties
-
-# (Static Text)
-object activeXTextClass
-beginObjectProperties
-major 4
-minor 1
-release 1
-x 20
-y 320
-w 80
-h 20
-font "arial-bold-r-12.0"
-fgColor index 14
-bgColor index 3
-useDisplayBg
-value {
-  "Resolution"
-}
-endObjectProperties
-
-# (Static Text)
-object activeXTextClass
-beginObjectProperties
-major 4
-minor 1
-release 1
-x 20
-y 345
-w 80
-h 20
-font "arial-bold-r-12.0"
-fgColor index 14
-bgColor index 3
-useDisplayBg
-value {
-  "Trigger"
-}
-endObjectProperties
-
-# (Menu Button)
-object activeMenuButtonClass
-beginObjectProperties
-major 4
-minor 0
-release 0
-x 100
-y 345
-w 95
-h 20
-fgColor index 25
-bgColor index 3
-inconsistentColor index 0
-topShadowColor index 1
-botShadowColor index 11
-controlPv "$(P)$(R)Trigger"
-indicatorPv "$(P)$(R)Trigger_RBV"
-font "arial-bold-r-12.0"
-endObjectProperties
-
-endGroup
-
-visPv "$(P)$(R)Model"
-visMin "4"
-visMax "5"
-endObjectProperties
-
-# (Group)
-object activeGroupClass
-beginObjectProperties
-major 4
-minor 0
-release 0
-x 10
-y 280
-w 380
-h 90
-
-beginGroup
-
-# (Rectangle)
-object activeRectangleClass
-beginObjectProperties
-major 4
-minor 0
-release 0
-x 10
-y 285
-w 380
-h 85
-lineColor index 14
-fill
-fillColor index 3
-endObjectProperties
-
-# (Static Text)
-object activeXTextClass
-beginObjectProperties
-major 4
-minor 1
-release 1
-x 10
-y 280
-w 95
-h 13
-font "arial-medium-r-12.0"
-fgColor index 14
-bgColor index 5
-value {
-  "  AH501C Driver  "
-}
-autoSize
-border
-endObjectProperties
-
-# (Menu Button)
-object activeMenuButtonClass
-beginObjectProperties
-major 4
-minor 0
-release 0
-x 100
-y 295
-w 95
-h 20
-fgColor index 25
-bgColor index 3
-inconsistentColor index 0
-topShadowColor index 1
-botShadowColor index 11
-controlPv "$(P)$(R)NumChannels"
-indicatorPv "$(P)$(R)NumChannels_RBV"
-font "arial-bold-r-12.0"
-endObjectProperties
-
-# (Static Text)
-object activeXTextClass
-beginObjectProperties
-major 4
-minor 1
-release 1
-x 20
-y 295
-w 80
-h 20
-font "arial-bold-r-12.0"
-fgColor index 14
-bgColor index 3
-useDisplayBg
-value {
-  "Channels"
-}
-endObjectProperties
-
-# (Menu Button)
-object activeMenuButtonClass
-beginObjectProperties
-major 4
-minor 0
-release 0
-x 100
-y 320
-w 95
-h 20
-fgColor index 25
-bgColor index 3
-inconsistentColor index 0
-topShadowColor index 1
-botShadowColor index 11
-controlPv "$(P)$(R)Resolution"
-indicatorPv "$(P)$(R)Resolution_RBV"
-font "arial-bold-r-12.0"
-endObjectProperties
-
-# (Static Text)
-object activeXTextClass
-beginObjectProperties
-major 4
-minor 1
-release 1
-x 20
-y 320
-w 80
-h 20
-font "arial-bold-r-12.0"
-fgColor index 14
-bgColor index 3
-useDisplayBg
-value {
-  "Resolution"
-}
-endObjectProperties
-
-# (Static Text)
-object activeXTextClass
-beginObjectProperties
-major 4
-minor 1
-release 1
-x 20
-y 345
-w 80
-h 20
-font "arial-bold-r-12.0"
-fgColor index 14
-bgColor index 3
-useDisplayBg
-value {
-  "Trigger"
-}
-endObjectProperties
-
-# (Menu Button)
-object activeMenuButtonClass
-beginObjectProperties
-major 4
-minor 0
-release 0
-x 100
-y 345
-w 95
-h 20
-fgColor index 25
-bgColor index 3
-inconsistentColor index 0
-topShadowColor index 1
-botShadowColor index 11
-controlPv "$(P)$(R)Trigger"
-indicatorPv "$(P)$(R)Trigger_RBV"
-font "arial-bold-r-12.0"
-endObjectProperties
-
-# (Static Text)
-object activeXTextClass
-beginObjectProperties
-major 4
-minor 1
-release 1
-x 210
-y 295
-w 80
-h 20
-font "arial-bold-r-12.0"
-fgColor index 14
-bgColor index 3
-useDisplayBg
-value {
-  "Bias State"
-}
-endObjectProperties
-
-# (Menu Button)
-object activeMenuButtonClass
-beginObjectProperties
-major 4
-minor 0
-release 0
-x 290
-y 295
-w 95
-h 20
-fgColor index 25
-bgColor index 3
-inconsistentColor index 0
-topShadowColor index 1
-botShadowColor index 11
-controlPv "$(P)$(R)BiasState"
-indicatorPv "$(P)$(R)BiasState_RBV"
-font "arial-bold-r-12.0"
-endObjectProperties
-
-# (Textupdate)
-object TextupdateClass
-beginObjectProperties
-major 10
-minor 0
-release 0
-x 330
-y 320
-w 55
-h 20
-controlPv "$(P)$(R)BiasVoltage_RBV"
-fgColor index 16
-fgAlarm
-bgColor index 10
-fill
-font "arial-bold-r-12.0"
-fontAlign "center"
-endObjectProperties
-
-# (Static Text)
-object activeXTextClass
-beginObjectProperties
-major 4
-minor 1
-release 1
-x 210
-y 320
-w 80
-h 20
-font "arial-bold-r-12.0"
-fgColor index 14
-bgColor index 3
-useDisplayBg
-value {
-  "Bias Volts"
-}
-endObjectProperties
-
-# (Textentry)
-object TextentryClass
-beginObjectProperties
-major 10
-minor 0
-release 0
-x 275
-y 320
-w 55
-h 20
-controlPv "$(P)$(R)BiasVoltage"
-fgColor index 25
-fgAlarm
-bgColor index 3
-fill
-font "arial-bold-r-12.0"
-endObjectProperties
-
-endGroup
-
-visPv "$(P)$(R)Model"
-visMin "5"
-visMax "7"
-endObjectProperties
-
 # (Static Text)
 object activeXTextClass
 beginObjectProperties
@@ -2310,156 +1718,6 @@ useDisplayBg
 value {
   "(Requires Averaging time = 0)"
 }
-endObjectProperties
-
-# (Group)
-object activeGroupClass
-beginObjectProperties
-major 4
-minor 0
-release 0
-x 10
-y 280
-w 380
-h 90
-
-beginGroup
-
-# (Rectangle)
-object activeRectangleClass
-beginObjectProperties
-major 4
-minor 0
-release 0
-x 10
-y 285
-w 380
-h 85
-lineColor index 14
-fill
-fillColor index 3
-endObjectProperties
-
-# (Static Text)
-object activeXTextClass
-beginObjectProperties
-major 4
-minor 1
-release 1
-x 10
-y 280
-w 99
-h 13
-font "arial-medium-r-12.0"
-fgColor index 14
-bgColor index 5
-value {
-  "  APS_EM Driver  "
-}
-autoSize
-border
-endObjectProperties
-
-# (Menu Button)
-object activeMenuButtonClass
-beginObjectProperties
-major 4
-minor 0
-release 0
-x 100
-y 320
-w 95
-h 20
-fgColor index 25
-bgColor index 3
-inconsistentColor index 0
-topShadowColor index 1
-botShadowColor index 11
-controlPv "$(P)$(R)PingPong"
-indicatorPv "$(P)$(R)PingPong_RBV"
-font "arial-bold-r-12.0"
-endObjectProperties
-
-# (Static Text)
-object activeXTextClass
-beginObjectProperties
-major 4
-minor 1
-release 1
-x 20
-y 320
-w 80
-h 20
-font "arial-bold-r-12.0"
-fgColor index 14
-bgColor index 3
-useDisplayBg
-value {
-  "Ping Pong"
-}
-endObjectProperties
-
-# (Textupdate)
-object TextupdateClass
-beginObjectProperties
-major 10
-minor 0
-release 0
-x 180
-y 295
-w 55
-h 20
-controlPv "$(P)$(R)IntegrationTime_RBV"
-fgColor index 16
-fgAlarm
-bgColor index 10
-fill
-font "arial-bold-r-12.0"
-fontAlign "center"
-endObjectProperties
-
-# (Static Text)
-object activeXTextClass
-beginObjectProperties
-major 4
-minor 1
-release 1
-x 20
-y 295
-w 110
-h 20
-font "arial-bold-r-12.0"
-fgColor index 14
-bgColor index 3
-useDisplayBg
-value {
-  "Integration Time"
-}
-endObjectProperties
-
-# (Textentry)
-object TextentryClass
-beginObjectProperties
-major 10
-minor 0
-release 0
-x 125
-y 295
-w 55
-h 20
-controlPv "$(P)$(R)IntegrationTime"
-fgColor index 25
-fgAlarm
-bgColor index 3
-fill
-font "arial-bold-r-12.0"
-endObjectProperties
-
-endGroup
-
-visPv "$(P)$(R)Model"
-visMin "1"
-visMax "2"
 endObjectProperties
 
 # (Textupdate)
@@ -2678,7 +1936,9 @@ x 90
 y 630
 w 70
 h 20
-controlPv "$(P):Diff12:Sigma_RBV"
+controlPv "$(P)$(R)DiffX:Sigma_RBV"
+displayMode "exp"
+precision 1
 fgColor index 16
 fgAlarm
 bgColor index 10
@@ -2697,7 +1957,9 @@ x 90
 y 605
 w 70
 h 20
-controlPv "$(P):Diff12:MeanValue_RBV"
+controlPv "$(P)$(R)DiffX:MeanValue_RBV"
+displayMode "exp"
+precision 1
 fgColor index 16
 fgAlarm
 bgColor index 10
@@ -2716,7 +1978,9 @@ x 165
 y 605
 w 70
 h 20
-controlPv "$(P):Diff34:MeanValue_RBV"
+controlPv "$(P)$(R)DiffY:MeanValue_RBV"
+displayMode "exp"
+precision 1
 fgColor index 16
 fgAlarm
 bgColor index 10
@@ -2735,7 +1999,9 @@ x 165
 y 630
 w 70
 h 20
-controlPv "$(P):Diff34:Sigma_RBV"
+controlPv "$(P)$(R)DiffY:Sigma_RBV"
+displayMode "exp"
+precision 1
 fgColor index 16
 fgAlarm
 bgColor index 10
@@ -2809,17 +2075,250 @@ value {
 }
 endObjectProperties
 
-# (Circle)
-object activeCircleClass
+# (Rectangle)
+object activeRectangleClass
 beginObjectProperties
 major 4
 minor 0
 release 0
-x 255
-y 310
-w 115
-h 50
+x 10
+y 285
+w 380
+h 85
 lineColor index 14
+fill
 fillColor index 3
+endObjectProperties
+
+# (Static Text)
+object activeXTextClass
+beginObjectProperties
+major 4
+minor 1
+release 1
+x 10
+y 280
+w 95
+h 13
+font "arial-medium-r-12.0"
+fgColor index 14
+bgColor index 5
+value {
+  "  AH501C Driver  "
+}
+autoSize
+border
+endObjectProperties
+
+# (Menu Button)
+object activeMenuButtonClass
+beginObjectProperties
+major 4
+minor 0
+release 0
+x 100
+y 295
+w 95
+h 20
+fgColor index 25
+bgColor index 3
+inconsistentColor index 0
+topShadowColor index 1
+botShadowColor index 11
+controlPv "$(P)$(R)NumChannels"
+indicatorPv "$(P)$(R)NumChannels_RBV"
+font "arial-bold-r-12.0"
+endObjectProperties
+
+# (Static Text)
+object activeXTextClass
+beginObjectProperties
+major 4
+minor 1
+release 1
+x 20
+y 295
+w 80
+h 20
+font "arial-bold-r-12.0"
+fgColor index 14
+bgColor index 3
+useDisplayBg
+value {
+  "Channels"
+}
+endObjectProperties
+
+# (Menu Button)
+object activeMenuButtonClass
+beginObjectProperties
+major 4
+minor 0
+release 0
+x 100
+y 320
+w 95
+h 20
+fgColor index 25
+bgColor index 3
+inconsistentColor index 0
+topShadowColor index 1
+botShadowColor index 11
+controlPv "$(P)$(R)Resolution"
+indicatorPv "$(P)$(R)Resolution_RBV"
+font "arial-bold-r-12.0"
+endObjectProperties
+
+# (Static Text)
+object activeXTextClass
+beginObjectProperties
+major 4
+minor 1
+release 1
+x 20
+y 320
+w 80
+h 20
+font "arial-bold-r-12.0"
+fgColor index 14
+bgColor index 3
+useDisplayBg
+value {
+  "Resolution"
+}
+endObjectProperties
+
+# (Static Text)
+object activeXTextClass
+beginObjectProperties
+major 4
+minor 1
+release 1
+x 20
+y 345
+w 80
+h 20
+font "arial-bold-r-12.0"
+fgColor index 14
+bgColor index 3
+useDisplayBg
+value {
+  "Trigger"
+}
+endObjectProperties
+
+# (Menu Button)
+object activeMenuButtonClass
+beginObjectProperties
+major 4
+minor 0
+release 0
+x 100
+y 345
+w 95
+h 20
+fgColor index 25
+bgColor index 3
+inconsistentColor index 0
+topShadowColor index 1
+botShadowColor index 11
+controlPv "$(P)$(R)TriggerMode"
+indicatorPv "$(P)$(R)Trigger_RBV"
+font "arial-bold-r-12.0"
+endObjectProperties
+
+# (Static Text)
+object activeXTextClass
+beginObjectProperties
+major 4
+minor 1
+release 1
+x 210
+y 295
+w 80
+h 20
+font "arial-bold-r-12.0"
+fgColor index 14
+bgColor index 3
+useDisplayBg
+value {
+  "Bias State"
+}
+endObjectProperties
+
+# (Menu Button)
+object activeMenuButtonClass
+beginObjectProperties
+major 4
+minor 0
+release 0
+x 290
+y 295
+w 95
+h 20
+fgColor index 25
+bgColor index 3
+inconsistentColor index 0
+topShadowColor index 1
+botShadowColor index 11
+controlPv "$(P)$(R)BiasState"
+indicatorPv "$(P)$(R)BiasState_RBV"
+font "arial-bold-r-12.0"
+endObjectProperties
+
+# (Textupdate)
+object TextupdateClass
+beginObjectProperties
+major 10
+minor 0
+release 0
+x 330
+y 320
+w 55
+h 20
+controlPv "$(P)$(R)BiasVoltage_RBV"
+fgColor index 16
+fgAlarm
+bgColor index 10
+fill
+font "arial-bold-r-12.0"
+fontAlign "center"
+endObjectProperties
+
+# (Static Text)
+object activeXTextClass
+beginObjectProperties
+major 4
+minor 1
+release 1
+x 210
+y 320
+w 80
+h 20
+font "arial-bold-r-12.0"
+fgColor index 14
+bgColor index 3
+useDisplayBg
+value {
+  "Bias Volts"
+}
+endObjectProperties
+
+# (Textentry)
+object TextentryClass
+beginObjectProperties
+major 10
+minor 0
+release 0
+x 275
+y 320
+w 55
+h 20
+controlPv "$(P)$(R)BiasVoltage"
+fgColor index 25
+fgAlarm
+bgColor index 3
+fill
+font "arial-bold-r-12.0"
 endObjectProperties
 
