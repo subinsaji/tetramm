@@ -28,11 +28,12 @@
 #include <epicsExport.h>
 #include "drvNSLS_EM.h"
 
-#define BROADCAST_TIMEOUT 2.0
-#define NSLS_EM_TIMEOUT .01
+#define BROADCAST_TIMEOUT 0.2
+#define NSLS_EM_TIMEOUT   0.1
 
-#define COMMAND_PORT 4747
-#define DATA_PORT 5757
+#define COMMAND_PORT    4747
+#define DATA_PORT       5757
+#define BROADCAST_PORT 37747
 #define MIN_INTEGRATION_TIME 400e-6
 #define MAX_INTEGRATION_TIME 1.0
 
@@ -64,7 +65,10 @@ drvNSLS_EM::drvNSLS_EM(const char *portName, const char *broadcastAddress, int m
     const char *functionName = "drvNSLS_EM";
     char tempString[256];
     
+    numModules_ = 0;
     moduleID_ = moduleID;
+    ipAddress_[0] = 0;
+    firmwareVersion_[0] = 0;
     broadcastAddress_ = epicsStrDup(broadcastAddress);
     
     acquireStartEvent_ = epicsEventCreate(epicsEventEmpty);
@@ -90,14 +94,22 @@ drvNSLS_EM::drvNSLS_EM(const char *portName, const char *broadcastAddress, int m
     // Connect to the broadcast port
     status = pasynOctetSyncIO->connect(udpPortName_, 0, &pasynUserUDP_, NULL);
     if (status) {
-        printf("%s:%s: error connecting to UDP port, status=%d, error=%s\n", 
-               driverName, functionName, status, pasynUserUDP_->errorMessage);
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+            "%s::%s error connecting to UDP port, status=%d, error=%s\n", 
+            driverName, functionName, status, pasynUserUDP_->errorMessage);
         return;
     }
     
     // Find module on network
-    findModule();
-    
+    status = findModule();
+    if (status) {
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+            "%s::%s error finding module, running asynReport to list modules found\n", 
+            driverName, functionName);
+        report(stdout, 1);
+        return;
+    }
+   
     acquiring_ = 0;
     readingActive_ = 0;
     setIntegerParam(P_Model, QE_ModelNSLS_EM);
@@ -141,57 +153,35 @@ asynStatus drvNSLS_EM::findModule()
     epicsFloat64 deltaTime;
     int status;
     int eomReason;
-    char rbuff[1024];
+    char buffer[1024];
+    char *ptr;
+    int count;
     char tempString[256];
-    int i=0;
+    int i;
     static const char *functionName="findModules";
 
-    rbuff[0] = 0;
-
-    status = pasynOctetSyncIO->write(pasynUserUDP_, "i", 1, 1.0, &nwrite);
+    status = pasynOctetSyncIO->write(pasynUserUDP_, "i\n", 2, 1.0, &nwrite);
     epicsTimeGetCurrent(&start);
 
-    while (1)
-    {
+    while (1) {
         epicsTimeGetCurrent(&now);
         deltaTime = epicsTimeDiffInSeconds(&now, &start);
         if (deltaTime > BROADCAST_TIMEOUT) break;
-        status = pasynOctetSyncIO->read(pasynUserUDP_, &rbuff[i], sizeof(rbuff), 0.0, &nread, &eomReason);
-
-asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, 
-"%s::%s read, status=%d, nread=%d, eomReason=%d\n",
-driverName, functionName, status, nread, eomReason);
-        if ((status == asynSuccess) && (nread > 0)) {
-            i = i + nread;
-            rbuff[i] = 0;
-            epicsTimeGetCurrent(&start);
-        }
-        else if (status == asynTimeout) {
-            epicsThreadSleep(1.0);
-        }
-        else {
+        status = pasynOctetSyncIO->read(pasynUserUDP_, buffer, sizeof(buffer), 0.01, &nread, &eomReason);
+        if ((status == asynTimeout) && (nread > 0)) {
+            ptr = buffer;
+            while (1) {
+                ptr = strstr(ptr, "id:");
+                if (!ptr) break;
+                sscanf(ptr, "id: %d%n", &moduleInfo_[numModules_].moduleID, &count);
+                ptr += count;
+                sscanf(ptr, " ip: %s%n", moduleInfo_[numModules_].moduleIP, &count);
+                ptr += count;
+                numModules_++;
+            }
+        } else if (status != asynTimeout) {
             return asynError;
         }
-    }
-    rbuff[i] = 0;
-
-    char *ie, *ptr = rbuff;
-    for (i=0; i<MAX_MODULES; i++)  {
-        if ((ie = strstr(ptr, "\r\n\r\n"))) {
-            sscanf(ptr,"%*s%d%*s%s%*s%*s", &moduleInfo_[i].moduleID, &moduleInfo_[i].moduleIP[0]);
-            ptr = ie+4;
-        }
-        else
-            break;
-    }
-
-    //  For now if the module search did not work then just hardcode the know module information
-    // so we can test the rest of the software
-    numModules_ = i;
-    if (numModules_ == 0) {
-        numModules_ = 1;
-        moduleInfo_[0].moduleID = 0;
-        strcpy(moduleInfo_[0].moduleIP, "164.54.160.201");
     }
 
     // See if the specified module was found
@@ -207,9 +197,7 @@ driverName, functionName, status, nread, eomReason);
     }
     
     // Create TCP command port
-    strcpy(tempString, moduleInfo_[i].moduleIP);
-//    strcat(tempString, ":4747 HTTP");
-    strcat(tempString, ":4747");
+    epicsSnprintf(tempString, sizeof(tempString), "%s:%d", moduleInfo_[i].moduleIP, COMMAND_PORT);
     // Set noAutoConnect, we will handle connecion management
     status = drvAsynIPPortConfigure(tcpCommandPortName_, tempString, 0, 1, 0);
     if (status) {
@@ -236,8 +224,7 @@ driverName, functionName, status, nread, eomReason);
     }
 
     // Create TCP data port
-    strcpy(tempString, moduleInfo_[i].moduleIP);
-    strcat(tempString, ":5757");
+    epicsSnprintf(tempString, sizeof(tempString), "%s:%d", moduleInfo_[i].moduleIP, DATA_PORT);
     status = drvAsynIPPortConfigure(tcpDataPortName_, tempString, 0, 0, 0);
     if (status) {
         asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
@@ -271,18 +258,17 @@ asynStatus drvNSLS_EM::writeReadMeter()
   // The meter has a strange behavior.  Commands that take no arguments succeed on the first write/read
   // but commands that take arguments fail on the first write read, must do it again.
   pasynCommonSyncIO->connectDevice(pasynUserTCPCommandConnect_);
-  status = pasynOctetSyncIO->writeRead(pasynUserTCPCommand_, outString_, strlen(outString_), 
-                                       inString_, sizeof(inString_), NSLS_EM_TIMEOUT, 
-                                       &nwrite, &nread, &eomReason);
   if (strlen(outString_) > 1) {
-      status = pasynOctetSyncIO->writeRead(pasynUserTCPCommand_, outString_, strlen(outString_), 
+      status = pasynOctetSyncIO->write(pasynUserTCPCommand_, outString_, strlen(outString_), 
+                                       NSLS_EM_TIMEOUT, &nwrite);
+  }
+  status = pasynOctetSyncIO->writeRead(pasynUserTCPCommand_, outString_, strlen(outString_), 
                                           inString_, sizeof(inString_), NSLS_EM_TIMEOUT, 
                                           &nwrite, &nread, &eomReason);
-  }
   if (status) {
       asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, 
           "%s:%s: error calling writeRead, outString=%s status=%d, nread=%d, eomReason=%d, inString=%s\n",
-          driverName, functionName, outString_, status, nread, eomReason, inString_);
+          driverName, functionName, outString_, status, (int)nread, eomReason, inString_);
   }
   else if (strncmp(inString_, "OK>", 3) != 0) {
       asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, 
@@ -291,10 +277,6 @@ asynStatus drvNSLS_EM::writeReadMeter()
       status = asynError;
   }
   pasynCommonSyncIO->disconnectDevice(pasynUserTCPCommandConnect_);
-  // On HTTP-type connections it is necessary to do an additional read operation to force the driver
-  // to detect the disconnect
-//  pasynOctetSyncIO->read(pasynUserTCPCommand_, tempString, sizeof(tempString)-1, 0.01, 
-//                         &nread, &eomReason);
   
   return status;
 }
@@ -308,8 +290,6 @@ void drvNSLS_EM::readThread(void)
     asynStatus status;
     size_t nRead;
     int eomReason;
-    int acquireMode;
-    int numAverage;
     int valuesPerRead;
     int pingPong;
     int i;
@@ -351,14 +331,11 @@ void drvNSLS_EM::readThread(void)
             (void)epicsEventWait(acquireStartEvent_);
             lock();
             readingActive_ = 1;
-            numAcquired_ = 0;
-            getIntegerParam(P_AcquireMode,   &acquireMode);
-            getIntegerParam(P_NumAverage,    &numAverage);
+            status = pasynOctet->flush(octetPvt, pasynUser);
             getIntegerParam(P_PingPong,      &pingPong);
             getIntegerParam(P_ValuesPerRead, &valuesPerRead);
-            status = pasynOctet->flush(octetPvt, pasynUser);
+            nRequested = sizeof(ASCIIData);
         }
-        nRequested = sizeof(ASCIIData);
         unlock();
         pasynManager->lockPort(pasynUser);
         status = pasynOctet->read(octetPvt, pasynUser, ASCIIData, nRequested, 
@@ -394,16 +371,6 @@ void drvNSLS_EM::readThread(void)
                 data[i] = (double)raw[i]/valuesPerRead;
             }         
             computePositions(data);
-            numAcquired_++;
-            if ((acquireMode == QEAcquireModeOneShot) &&
-                (numAcquired_ >= numAverage)) {
-                strcpy(outString_, "m 1");
-                writeReadMeter();
-                acquiring_ = 0;
-            }
-            if (acquireMode == QEAcquireModeContinuous) {
-                triggerCallbacks();
-            }
         }
     }
 }
@@ -429,7 +396,11 @@ asynStatus drvNSLS_EM::setAcquire(epicsInt32 value)
         }
         strcpy(outString_, "m 1");
         writeReadMeter();
+        // Call the base class function in case anything needs to be done there.
+        drvQuadEM::setAcquire(0);
     } else {
+        // Call the base class function because it handles some common tasks.
+        drvQuadEM::setAcquire(1);
         setMode();
         // Notify the read thread if acquisition status has started
         epicsEventSignal(acquireStartEvent_);
@@ -575,8 +546,20 @@ void drvNSLS_EM::exitHandler()
   */
 void drvNSLS_EM::report(FILE *fp, int details)
 {
-    fprintf(fp, "%s: port=%s, IP address=%s, module ID=%d, firmware version=%s\n",
-            driverName, portName, ipAddress_, moduleID_, firmwareVersion_);
+    int i;
+    
+    fprintf(fp, "%s: port=%s\n", driverName, portName);
+    if (details > 0) {
+        fprintf(fp, "  IP address:       %s\n", ipAddress_);
+        fprintf(fp, "  Module ID:        %d\n", moduleID_);
+        fprintf(fp, "  Firmware version: %s\n", firmwareVersion_);
+    }
+    fprintf(fp, "  Number of modules found on network=%d\n", numModules_);
+    for (i=0; i<numModules_; i++) {
+        fprintf(fp, "    Module %d\n", i);
+        fprintf(fp, "      Module ID:  %d\n", moduleInfo_[i].moduleID);
+        fprintf(fp, "      IP address: %s\n", moduleInfo_[i].moduleIP);
+    }
     drvQuadEM::report(fp, details);
 }
 
@@ -587,8 +570,8 @@ extern "C" {
 
 /** EPICS iocsh callable function to call constructor for the drvNSLS_EM class.
   * \param[in] portName The name of the asyn port driver to be created.
-  * \param[in] QEPortName The name of the asyn communication port to the NSLS_EM 
-  *            created with drvAsynIPPortConfigure or drvAsynSerialPortConfigure.
+  * \param[in] broadcastAddress The broadcast address of the network with this module
+  * \param[in] moduleID The module ID of this module, set with rotary switch on module
   * \param[in] ringBufferSize The number of samples to hold in the input ring buffer.
   *            This should be large enough to hold all the samples between reads of the
   *            device, e.g. 1 ms SampleTime and 1 second read rate = 1000 samples.
