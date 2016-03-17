@@ -3,7 +3,7 @@ from iocbuilder import Device, AutoSubstitution, Architecture, Xml
 from iocbuilder.arginfo import *
 
 from iocbuilder.modules.seq import Seq
-from iocbuilder.modules.ADCore import ADCore, NDStats, ADBaseTemplate, makeTemplateInstance, includesTemplates
+from iocbuilder.modules.ADCore import ADCore, NDStats, NDStdArrays, ADBaseTemplate, makeTemplateInstance, includesTemplates
 from iocbuilder.modules.asyn import Asyn, AsynPort, AsynIP
 from iocbuilder.modules.mca import Mca
 
@@ -13,6 +13,11 @@ class statPlugins(Xml):
 statPlugins.ArgInfo.descriptions["NDARRAY_PORT"] = Ident("The quadEM.AH501 or quadEM.401 port to connect to", NDStats)
 #statPlugins.ArgInfo.descriptions["STAT_NCHAN"] = Ident("Number of elements in the waveforms which accumulate statistics", NDStats)
 #statPlugins.ArgInfo.descriptions["STAT_XSIZE"] = Ident("Maximum size of X histogram (must be <= RINGBUFFERSIZE)", NDStats)
+
+class arrayPlugins(Xml):
+    """This plugin instantiates 11 array plugins for Current, Sum, Diff and Pos"""
+    TemplateFile = 'arrayPlugins.xml'
+arrayPlugins.ArgInfo.descriptions["NDARRAY_PORT"] = Ident("The quadEM.AH501 or quadEM.401 port to connect to", NDStdArrays)
 
 class _QuadEMTemplate(AutoSubstitution):
     """Template containing the base records of any quedEM driver"""
@@ -30,19 +35,12 @@ class _QuadEM(AsynPort):
     def __init__(self, PORT, **args):
         # Init the asyn port class
         self.__super.__init__(PORT)
-	self.PORT = PORT
         # Init the base class
         makeTemplateInstance(self._BaseTemplate, locals(), args)
+        self.PORT = PORT
         # Init the template class
         if self._SpecificTemplate:
-	  makeTemplateInstance(self._SpecificTemplate, locals(), args)
-
-            #self.template = self._SpecificTemplate(**filter_dict(args,
-                #self._SpecificTemplate.ArgInfo.Names()))
-            #self.__dict__.update(self.template.args)
-        # Update args
-        #self.__dict__.update(self.base.args)
-        #self.__dict__.update(args())
+            makeTemplateInstance(self._SpecificTemplate, locals(), args)
 
     LibFileList = ['quadEM']
 
@@ -52,13 +50,14 @@ class _QuadEM(AsynPort):
     # This tells xmlbuilder to use PORT instead of name as the row ID
     UniqueName = "PORT"
 
-class _TetrAMMTemplate(AutoSubstitution, Device):
+@includesTemplates(_QuadEMTemplate)
+class TetrAMMTemplate(AutoSubstitution, Device):
     TemplateFile = "TetrAMM.template"
     DbdFileList = ['drvTetrAMM']
     SubstitutionOverwrites = [_QuadEMTemplate]
 
 class TetrAMM(_QuadEM):
-    _SpecificTemplate = _TetrAMMTemplate
+    _SpecificTemplate = TetrAMMTemplate
     def __init__(self, QSIZE = 20, RING_SIZE = 10000,
             IP = "172.23.253.12:10001", **args):
          # # Make an asyn IP port
