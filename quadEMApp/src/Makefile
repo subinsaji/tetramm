@@ -22,6 +22,7 @@ INC += drvQuadEM.h
 quadEM_SRCS         += drvQuadEM.cpp
 quadEM_SRCS         += drvAHxxx.cpp
 quadEM_SRCS         += drvTetrAMM.cpp
+quadEM_SRCS         += drvNSLS_EM.cpp
 quadEM_SRCS         += quadEM_SNL.st
 quadEM_SRCS         += four1.c
 #quadEM_SRCS_vxWorks += drvAPS_EM.cpp

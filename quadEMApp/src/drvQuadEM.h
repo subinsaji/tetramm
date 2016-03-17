@@ -43,9 +43,12 @@
 #define P_ReadStatusString         "QE_READ_STATUS"             /* asynInt32,    r/w */
 #define P_ResolutionString         "QE_RESOLUTION"              /* asynInt32,    r/w */
 #define P_ValuesPerReadString      "QE_VALUES_PER_READ"         /* asynInt32,    r/w */
+#define P_ReadFormatString         "QE_READ_FORMAT"             /* asynInt32,    r/w */
 #define P_AveragingTimeString      "QE_AVERAGING_TIME"          /* asynFloat64,  r/w */
 #define P_NumAverageString         "QE_NUM_AVERAGE"             /* asynInt32,    r/o */
 #define P_NumAveragedString        "QE_NUM_AVERAGED"            /* asynInt32,    r/o */
+#define P_NumAcquireString         "QE_NUM_ACQUIRE"             /* asynInt32,    r/o */
+#define P_NumAcquiredString        "QE_NUM_ACQUIRED"            /* asynInt32,    r/o */
 #define P_ModelString              "QE_MODEL"                   /* asynInt32,    r/w */
 #define P_FirmwareString           "QE_FIRMWARE"                /* asynOctet,    r/w */
 
@@ -59,7 +62,8 @@ typedef enum {
     QE_ModelAH501,
     QE_ModelAH501C,
     QE_ModelAH501D,
-    QE_ModelTetrAMM
+    QE_ModelTetrAMM,
+    QE_ModelNSLS_EM
 } QEModel_t;
 
 /* These enums give the offsets into the data array for each value */
@@ -85,15 +89,25 @@ typedef enum {
 /* Acquire modes */
 typedef enum {
     QEAcquireModeContinuous,
-    QEAcquireModeOneShot
+    QEAcquireModeMultiple,
+    QEAcquireModeSingle
 } QEAcquireMode_t;
 
 /* Trigger modes */
 typedef enum {
-    QETriggerModeInternal,
+    QETriggerModeFreeRun,
+    QETriggerModeSoftware,
     QETriggerModeExtTrigger,
-    QETriggerModeExtGate
+    QETriggerModeExtBulb,
+    QETriggerModeExtGate,
 } QETriggerMode_t;
+
+/* Read format */
+typedef enum {
+    QEReadFormatBinary,
+    QEReadFormatASCII
+} QEReadFormat_t;
+
 
 #define QE_MAX_DATA (QEPositionY+1)
 #define QE_MAX_INPUTS 4
@@ -141,9 +155,12 @@ protected:
     int P_ReadStatus;
     int P_Resolution;
     int P_ValuesPerRead;
+    int P_ReadFormat;
     int P_AveragingTime;
     int P_NumAverage;
     int P_NumAveraged;
+    int P_NumAcquire;
+    int P_NumAcquired;
     int P_Model;
     int P_Firmware;
     #define LAST_QE_COMMAND P_Firmware
@@ -153,23 +170,28 @@ protected:
     int numChannels_;
     int valuesPerRead_;
     int acquiring_;
+    int numAcquired_;
 
     void computePositions(epicsFloat64 raw[QE_MAX_INPUTS]);
     virtual asynStatus doDataCallbacks();
-    virtual asynStatus setAcquire(epicsInt32 value)=0;
-    virtual asynStatus setPingPong(epicsInt32 value);
-    virtual asynStatus setIntegrationTime(epicsFloat64 value);
-    virtual asynStatus setRange(epicsInt32 value);
-    virtual asynStatus setTriggerMode(epicsInt32 value);
-    virtual asynStatus setNumChannels(epicsInt32 value);
+    virtual asynStatus readStatus()=0;
+    virtual asynStatus reset()=0;
+    virtual asynStatus setAcquire(epicsInt32 value);
+    virtual asynStatus setAcquireMode(epicsInt32 value);
+    virtual asynStatus setAveragingTime(epicsFloat64 value);
     virtual asynStatus setBiasState(epicsInt32 value);
     virtual asynStatus setBiasVoltage(epicsFloat64 value);
     virtual asynStatus setBiasInterlock(epicsInt32 value);
+    virtual asynStatus setPingPong(epicsInt32 value);
+    virtual asynStatus setIntegrationTime(epicsFloat64 value);
+    virtual asynStatus setNumChannels(epicsInt32 value);
+    virtual asynStatus setNumAcquire(epicsInt32 value);
+    virtual asynStatus setRange(epicsInt32 value);
+    virtual asynStatus setReadFormat(epicsInt32 value);
     virtual asynStatus setResolution(epicsInt32 value);
+    virtual asynStatus setTriggerMode(epicsInt32 value);
     virtual asynStatus setValuesPerRead(epicsInt32 value);
     virtual void       triggerCallbacks();
-    virtual asynStatus readStatus()=0;
-    virtual asynStatus reset()=0;
     
 private:
     int ringCount_;

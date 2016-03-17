@@ -10,9 +10,9 @@
     <h1>
       quadEM Driver</h1>
     <h2>
-      R6-0</h2>
+      R7-0</h2>
     <h2>
-      July XXX, 2015</h2>
+      February XXX, 2016</h2>
     <h2>
       Mark Rivers, University of Chicago</h2>
   </div>
@@ -32,6 +32,7 @@
     <li><a href="#Common_Setup">Common Setup</a></li>
     <li><a href="#TetrAMM_Setup">TetrAMM Setup</a></li>
     <li><a href="#AHxxx_Setup">AH401 and AH501 series Setup</a></li>
+    <li><a href="#NSLS_EM_Setup">NSLS Electrometer Setup</a></li>
     <li><a href="#APS_EM_Setup">APS Electrometer Setup</a></li>
   </ul>
   <h2 id="Overview">
@@ -51,17 +52,20 @@
     <li>The TetrAMM picoammeter sold by <a href="http://www.caenels.com/caenels/products.php">
       CAENels</a>. This device communicates using TCP/IP over 1 Gbit/s Ethernet. It provides
       4-channel current measurements at up to 20 kHz.</li>
+    <li>The NSLS Quad Electrometer (called NSLS_EM in this document). This device consists
+      of a 4-channel digital electrometer unit with Ethernet communication. The device
+      provides 4-channel current measurements at up to 2500 Hz.</li>
     <li>The Quad Electrometer built by <a href="mailto:skross@aps.anl.gov">Steve Ross</a>
       from the APS (called APS_EM in this document). This device consists of a 4-channel
       digital electrometer unit and 2 VME boards. The device provides 2 readings per diode
       at up to 813 Hz.</li>
   </ol>
   <p>
-    The AH401 series and the APS_EM are based on the same principle of an op-amp run
-    as a current amplifier with a large feedback capacitor, and a high resolution ADC.
-    The AH501 series and TetrAMM are based on a transimpedance input stage for current
-    sensing, combined with analog signal conditioning and filtering stages. The AH501C,
-    AH501D, and TetrAMM have an integrated programmable bias supply.</p>
+    The AH401 series, NSLS_EM, and APS_EM are based on the same principle of an op-amp
+    run as a current amplifier with a large feedback capacitor, and a high resolution
+    ADC. The AH501 series and TetrAMM are based on a transimpedance input stage for
+    current sensing, combined with analog signal conditioning and filtering stages.
+    The AH501C, AH501D, and TetrAMM have an integrated programmable bias supply.</p>
   <p>
     The <b>quadEM</b> software includes asyn drivers and an SNL program that provide
     support for the following:</p>
@@ -72,8 +76,10 @@
       record described below. The quadEM drivers do the callbacks on the asynGenericPointer
       interface for NDArray objects required to use the areaDetector plugins. The NDPluginStats
       module is used to compute the averaged readings. It also provides additional statistics
-      including standard deviation, min, max, a histogram of values, time-series of the
-      statistics, etc.</li>
+      including standard deviation, min, max, and a histogram of values.</li>
+    <li>The NDPluginStats provide time-series of the statistics. These can be used to
+      for on-the-fly data acquisition applications, where the meter is triggered by an
+      external pulse source, such as one derived from a motor motion.</li>
     <li>One could also use the standard asynFloat64 device support with ai records and
       scan=I/O Intr, in which case the record would update with every reading from the
       device. This is likely to overwhelm the EPICS IOC if the electrometer is run at
@@ -82,17 +88,19 @@
       file plugins from areaDetector.</li>
     <li>Time series data (like a digital scope) of the current, sum, difference and position
       at speeds up to 20000 Hz (TetrAMM), 6510 Hz (AH501 series), 1000 Hz (AH401 series)
-      or 813 Hz (APS_EM). The data is available in standard EPICS waveform records, using
-      the drvFastSweep asyn driver from the synApps <a href="mca.html">mca</a> module.
-      The time per point can be greater, in which case it does averaging. The quadEM drivers
-      do the callbacks on the asynInt32Array interface required to use this support.</li>
+      2500 Hz (NSLS_EM), or 813 Hz (APS_EM). The data is available in standard EPICS waveform
+      records, using the drvFastSweep asyn driver from the synApps <a href="mca.html">mca</a>
+      module. The time per point can be greater, in which case it does averaging. The
+      quadEM drivers do the callbacks on the asynInt32Array interface required to use
+      this support.</li>
     <li>FFTs of the time series data, providing the power spectrum of each signal as another
       EPICS waveform record.</li>
     <li>epid (fast feedback). This provides fast feedback via an asyn D/A converter (e.g.
-      dac128V), also at speeds up to 20000 Hz, 6510 Hz, 1000Hz or 813Hz. If it is run
-      slower it does signal averaging. This support is provided in the synApps <a href="www.aps.anl.gov/bcda/synApps/std/std.html">
-        std</a> module. The quadEM drivers do the callbacks on the asynFloat64 interface
-      required to use the epid fast feedback device support.</li>
+      dac128V), also at speeds up to 20000 Hz, 6510 Hz, 1000Hz, 2500 Hz, or 813Hz. If
+      it is run slower it does signal averaging. This support is provided in the synApps
+      <a href="www.aps.anl.gov/bcda/synApps/std/std.html">std</a> module. The quadEM drivers
+      do the callbacks on the asynFloat64 interface required to use the epid fast feedback
+      device support.</li>
   </ul>
   <p>
     The following manuals provide detailed information on these devices:</p>
@@ -112,9 +120,9 @@
     for the TetrAMM (<a href="quadEMDoxygenHTML/classdrv_tetr_a_m_m.html">(drvTetrAMM.cpp)</a>,
     AH401 and AH501 series <a href="quadEMDoxygenHTML/classdrv_a_hxxx.html">(drvAHxxx.cpp)</a>
     and the APS electrometer <a href="quadEMDoxygenHTML/classdrv_a_p_s___e_m.html">(drvAPS_EM.cpp)</a>.
-    There is an EPICS State Notation Language (SNL) program (quadEM_SNL.st) is used
-    to synchronize acquisition of time-series data, and to compute FFT power-spectra
-    of the time-series data.</p>
+    The EPICS State Notation Language (SNL) program (quadEM_SNL.st) is used to synchronize
+    acquisition of time-series data, and to compute FFT power-spectra of the time-series
+    data.</p>
   <p>
     The quadEM driver works as follows:</p>
   <ul>
@@ -146,16 +154,11 @@
       in the mca module for time-series acquisition.</li>
   </ul>
   <p>
-    Note: For the AH501D firmware version 2.0 fixes two problems with previous versions:</p>
+    Note: This version of the driver requires a minimum firmware version on some models</p>
   <ul>
-    <li>The NAQ command caused data to be sent immediately, it did not wait for a "TRG
-      ON" or "ACQ ON" command as it should.</li>
-    <li>The "TRG ON" command sent extra characters on the trailing edge of each gate pulse.
-      This would corrupt the data if multiple trigger pulses were received.</li>
+    <li>AH501D Firmware version 2.0.</li>
+    <li>TetrAMM Firmware version XXXXX</li>
   </ul>
-  <p>
-    The AH501D must be updated to firmware 2.0 for proper operation with quadEM R4-1
-    or later.</p>
   <p>
     Prior to R5-0 the quadEM driver assumed the following geometry for the 4 current
     inputs:</p>
@@ -172,9 +175,9 @@
     as 2-1 and 4-3, which would correspond to Position12 being positive to the right
     and Position34 being positive up in the above diagram.</p>
   <p>
-    For R5-0 two geometries are supported, and the names of the Sum, Diff and Position
-    PVs were changed. The computed quantities are called SumX, SumY, SumAll, DiffX,
-    DiffY, PositionX, and PositionY.</p>
+    For R5-0 and later two geometries are supported, and the names of the Sum, Diff
+    and Position PVs were changed. The computed quantities are called SumX, SumY, SumAll,
+    DiffX, DiffY, PositionX, and PositionY.</p>
   <p>
     The first geometry is the same as that illustrated above, and is called Diamond.
     For this geometry only 2 diodes are used for the position calculation in each direction.
@@ -258,6 +261,7 @@
             <li>5: AH501C</li>
             <li>6: AH501D</li>
             <li>7: TetrAMM</li>
+            <li>8: NSLS_EM</li>
           </ul>
         </td>
       </tr>
@@ -297,19 +301,15 @@
         <td>
           Acquire mode. Values are:
           <ul>
-            <li>0: Continuous </li>
-            <li>1: One-shot </li>
+            <li>0: "Continuous" Acquires data continuously until Acquire is set back to 0.</li>
+            <li>1: "Multiple" Acquires NumAcquire acquisitions and then automatically stops acquisition,
+              setting Acquire back to 0.</li>
+            <li>2: "Single" Acquires a single acquisition. This is a convenience, it is identical
+              to Multiple with NumAcquire=1.</li>
           </ul>
-          In continuous mode setting Acquire=1 acquires data continuously until Acquire is
-          set back to 0.<br />
-          In one-shot mode setting Acquire=1 will acquire a data for a single AveragingTime
-          time period. This will result in a single call to the plugins, and thus a single
-          set of averaged values. The driver will then set Acquire back to 0. This mode is
-          intended for data acquisition, for example with the sscan record. With the AH401
-          and AH501 series One-shot works in triggered mode as well. When Acquire is set to
-          1 it will wait for the trigger to acquire NumAverage_RBV samples. This may require
-          multiple trigger pulses depending on the length of the pulses, the AveragingTime
-          and the SampleTime_RBV.<br />
+          Multiple and Single mode are typically used for data acquisition. See the tables
+          below for an explanation of the behavior for all combinations of AcquireMode and
+          TriggerMode for each model.<br />
         </td>
       </tr>
       <tr>
@@ -327,11 +327,50 @@
           All</td>
         <td>
           Acquire command. This command turns acquisition from the device on (1) and off (0)
-          Since it is a "busy" record the device can be used with the sscan record when AcquireMode=One-shot.<br />
-          <b>Important note:</b> Operation in One-shot mode with the sscan record also requires
+          Since it is a "busy" record the device can be used for step-scanning with the sscan
+          record when AcquireMode=Single<br />
+          <b>Important note:</b> Operation in Single mode with the sscan record also requires
           that the statistics plugins be set to have CallbacksBlock=Yes so that the driver
           waits for the statistics plugins to compute before it sets Acquire back to 0.
         </td>
+      </tr>
+      <tr>
+        <td>
+          QE_READ_FORMAT</td>
+        <td>
+          $(P)$(R)ReadFormat<br />
+          $(P)$(R)ReadFormat_RBV</td>
+        <td>
+          bo<br />
+          bi</td>
+        <td>
+          asynInt32</td>
+        <td>
+          r/w</td>
+        <td>
+          All except APS_EM and NSLS_EM</td>
+        <td>
+          Read format from the device. Values are:
+          <ul>
+            <li>0: Binary </li>
+            <li>1: ASCII </li>
+          </ul>
+          In binary mode the AH401 and AH501 send integer data with no delimiters or terminators.
+          This can lead to problems if the data stream is somehow corrupted because there
+          is no way to know where one set of readings end and the next set begins. This should
+          not happen under normal conditions because the devices use TCP, which guarantees
+          retransmission of dropped packets. However, it has been observed to occur. In binary
+          mode the TetrAMM sends IEEE 754 double-precision values for each channel, followed
+          by a Signalling NaN. The NaN is thus effectively a terminator that can be used to
+          synchronize the data stream if it is somehow corrupted. ASCII mode is robust against
+          the synchronization problem, since each reading ends with terminator characters.
+          However, ASCII mode is generally slower. On the AH401 ASCII mode appears to be able
+          to do 500 reading/s, which is sufficient except for the case when IntegrationTime=.001
+          and PingPong=Yes. On the AH501 ASCII mode ranges from 7 to 10 times slower than
+          binary mode. On the TetrAMM ASCII mode requires a minimum value of ValuesPerRead
+          of 500, which limits the update rate to 200 Hz. In binary mode the minimum value
+          of ValuesPerRead is 5, which is an update date of 20 kHz, or 100 times faster than
+          ASCII mode. </td>
       </tr>
       <tr>
         <td>
@@ -373,6 +412,18 @@
             <li>100 pC</li>
             <li>50 pC</li>
           </ul>
+          For the NSLS_EM this selects the feedback capacitor, which controls the gain of
+          the device. There are 8 capacitor choices in units of saturation charge:
+          <ul>
+            <li>350 pC</li>
+            <li>300 pC</li>
+            <li>250 pC</li>
+            <li>200 pC</li>
+            <li>150 pC</li>
+            <li>100 pC</li>
+            <li>50 pC</li>
+            <li>12 pC</li>
+          </ul>
           For the APS_EM this selects the feedback capacitor, which controls the gain of the
           device. There are 8 capacitor choices:
           <ul>
@@ -413,21 +464,24 @@
         <td>
           r/w</td>
         <td>
-          AH401 series, APS_EM</td>
+          AH401 series, NSLS_EM, APS_EM</td>
         <td>
-          Both the AH401 series and the APS_EM have 2 input channels, which we call Ping and
-          Pong here. This doubles the speed of the unit, because one channel is being digitized
-          while the other is integrating. This record selects how the two channels are treated.<br />
+          The AH401 series, NSLS_EM, and the APS_EM have 2 input channels, which we call Ping
+          and Pong here. This doubles the speed of the unit, because one channel is being
+          digitized while the other is integrating. This record selects how the two channels
+          are treated.<br />
           On the AH401 series the choices are "Off" (0) and "On" (1). "Off" only returns the
           data from the Ping channel. This reduces noise because only a single integration
           capacitor is used, but it reduces the data rate by a factor of two, because data
           are only returned on every other integration time. "On" returns the data from both
           channels, which doubles the data rate at some expense in noise.<br />
-          On the APS_EM both values are always transmitted from the device, and the choices
-          are #1 (Ping), #2 (Pong), and Avg. which averages the values from the Ping and Pong
-          channels. Note that if Range=External and the two external capacitors are different,
-          then one should not use Avg. because that will mix data from two different gains.
-        </td>
+          On the NSLS_EM and APS_EM both values are always transmitted from the device. On
+          the APS_EM and the choices are #1 (Ping), #2 (Pong), and Avg. which averages the
+          values from the Ping and Pong channels. Note that if Range=External and the two
+          external capacitors are different, then one should not use Avg. because that will
+          mix data from two different gains. On the NSLS_EM and the choices are Phase0, Phase1,
+          and Both. These are really the same as the choices on the APS_EM, but using the
+          nomenclature that the NSLS_EM documentation uses.</td>
       </tr>
       <tr>
         <td>
@@ -443,13 +497,16 @@
         <td>
           r/w</td>
         <td>
-          AH401 series, APS_EM</td>
+          AH401 series, NSLS_EM, APS_EM</td>
         <td>
           Selects the integration time of the amplifier. As the integration time is increased
           the sensitivity increases, but the number of readings/sec sent from the device is
           decreased.<br />
           For the AH401 series values range from 0.001s to 1.000s. The data are sent after
           one integration time if PingPong="On" or after 2 integration times if PingPong="Off".<br />
+          For the NSLS_EM the values range from .0004s to 1.0 s. Both the Phase0 (Ping) and
+          Phase1 (Pong) values are sent at after a time period equal to IntegrationTime *
+          ValuesPerRead.<br />
           For the APS_EM the values range from .000615s to 0.1311s. The data are sent to the
           VME card from the amplifier after 2 integration times, one value in the Ping channel
           and one value in the Pong channel. The data period is thus 0.00123 to 0.02622 s,
@@ -661,13 +718,15 @@
         <td>
           All</td>
         <td>
-          The behavior of this record is different on the TetrAMM from all other models. On
-          the TetrAMM this record controls the number of readings that are averaged in the
-          TetrAMM itself using the NRSAMP command. The TetrAMM always digitizes at 100 kHz
-          (10 microseconds per sample). The minimum value of NRSAMP (and hence ValuesPerRead)
-          is 5, which means the maximum number of values per second is 20000. Setting ValuesPerRead
-          to 100, for example, will average 100 readings in the TetrAMM, and thus result in
-          a 1000 values per second sent from the TetrAMM to EPICS.<br />
+          On the TetrAMM this record controls the number of readings that are averaged in
+          the TetrAMM using the NRSAMP command. The TetrAMM always digitizes at 100 kHz (10
+          microseconds per sample). The minimum value of NRSAMP (and hence ValuesPerRead)
+          in Binary mode is 5, which means the maximum number of values per second is 20000.
+          Setting ValuesPerRead to 100, for example, will average 100 readings in the TetrAMM,
+          and thus result in a 1000 values per second sent from the TetrAMM to EPICS.<br />
+          <br />
+          On the NSLS_EM this record controls the number of readings that are summed in the
+          NSLS_EM using the "n" command.<br />
           <br />
           For all other models ValuesPerRead controls the number of values that are read from
           the meter in a single call. These values are averaged in the driver before it does
@@ -676,12 +735,14 @@
           <br />
           Increasing ValuesPerRead will reduce the CPU time because:
           <ul>
-            <li>On the TetrAMM it reduces the number of packets per second sent, from the maximum
+            <li>On the TetrAMM it reduces the number of readings per second sent, from the maximum
               of 20000, to 100000/ValuesPerRead.</li>
+            <li>On the NSLS_EM it reduces the number of readings per second sent, from the maximum
+              of 2500 (depending on IntegrationTime, to a maximum of 2500/ValuesPerRead.</li>
             <li>On the AH401 and AH501 series the driver reduces the frequency of asynOctet-&gt;read()
               calls by a factor of ValuesPerRead, because it can obtain multiple readings from
               the meter in a single call. This is particularly significant on the AH501 series,
-              which can transmit up to 26,040 packets per second!</li>
+              which can transmit up to 26,040 readings per second.</li>
             <li>It reduces the frequency of callbacks to device support.</li>
           </ul>
           The potential disadvantages of larger values for ValuesPerRead are:
@@ -689,6 +750,7 @@
             <li>It will change the statistics computed by the NDPluginStats plugin because an
               initial averaging operation has already been performed, which reduces the standard
               deviation, changes the histogram, etc.</li>
+            <li>On the NSLS_EM it prevents selecting only Phase0 or Phase1 with the PingPong record.</li>
             <li>It will reduce the sampling frequency of the TimeSeries support</li>
             <li>It will reduce the update frequency of the EPID fast feedback support.</li>
           </ul>
@@ -712,8 +774,8 @@
           by the following parameters:
           <ul>
             <li>ValuesPerRead: All models</li>
-            <li>IntegrationTime: AH401 series and APS_EM</li>
-            <li>PingPong: AH401 series</li>
+            <li>IntegrationTime: AH401 series, NSLS_EM, and APS_EM</li>
+            <li>PingPong: AH401 series and NSLS_EM</li>
             <li>NumChannels: AH501 series</li>
             <li>Resolution: AH501 series</li>
           </ul>
@@ -740,6 +802,16 @@
           The minimum sample time is 0.001 seconds, or 1 kHz sampling frequency. The maximum
           sampling time (PingPong=0) is 2 seconds, or 0.5 Hz sampling frequency. Setting ValuesPerRead
           &gt; 1 will increase the sample time and reduce the sampling frequency proportionally.<br />
+          <br />
+          The sample time on the NSLS_EM is controlled by the following algorithm:
+          <ul>
+            <li>SampleTime = IntegrationTime * ValuesPerRead</li>
+            <li>If PingPong != Both then SampleTime = SampleTime * 2</li>
+          </ul>
+          The minimum sample time is 0.00041 seconds, or 2.5 kHz sampling frequency. The maximum
+          sampling time (PingPong!=Both) is 2 seconds, or 0.5 Hz sampling frequency. Setting
+          ValuesPerRead &gt; 1 will increase the sample time and reduce the sampling frequency
+          proportionally.<br />
           <br />
           For the APS_EM the sample time is controlled only by ValuesPerRead and the IntegrationTime.
           For ValuesPerRead=1 it ranges from 0.00123 to 0.02622 s, or a sampling frequency
@@ -771,9 +843,10 @@
           automatic callbacks to areaDetector plugins. In this case data will only be read
           from the ring buffer when the ReadData record is processed. This will read out all
           available data from ring buffer, and the actual number of values read will be NumAveraged_RBV.
-          This mode is useful when the quadEM is being used for data acquisition, for example
-          in a scan. In this case processing the ReadData record will read all values that
-          have accumulated in the ring buffer since ReadData was last processed.</td>
+          This mode could be useful when the quadEM is being used for data acquisition, for
+          example in a scan. In this case processing the ReadData record will read all values
+          that have accumulated in the ring buffer since ReadData was last processed. ReadData
+          must be processed frequently enough to avoid ring-buffer overflow.</td>
       </tr>
       <tr>
         <td>
@@ -791,7 +864,11 @@
         <td>
           Provides the number of values that will be accumulated in the ring buffer before
           they are read out into NDArray objects and any registered plugins are called. NumAverage_RBV
-          is computed as (int)((AveragingTime / SampleTime_RBV) + 0.5).</td>
+          is computed as (int)((AveragingTime / SampleTime_RBV) + 0.5).
+          <br />
+          On the TetrAMM when TriggerMode=ExternalBulb the AveragingTime is ignored and NumAverage_RBV
+          will be 0. The averaging is done on all samples collected when the external gate
+          signal is asserted</td>
       </tr>
       <tr>
         <td>
@@ -811,7 +888,47 @@
           before they were read out into NDArray objects and any registered plugins were called.
           If AveragingTime&gt;0 then NumAveraged_RBV will be the same as NumAverage_RBV. However,
           if AveragingTime=0. then NumAverage_RBV=0 and NumAveraged_RBV gives the actual number
-          of values read from the ring buffer when the ReadData record was processed.</td>
+          of values read from the ring buffer when the ReadData record was processed. This
+          is also true on the TetrAMM when TriggerMode=ExternalBulb.</td>
+      </tr>
+      <tr>
+        <td>
+          QE_NUM_ACQUIRE</td>
+        <td>
+          $(P)$(R)NumAcquire
+          <br />
+          $(P)$(R)NumAcquire_RBV</td>
+        <td>
+          longout
+          <br />
+          longin</td>
+        <td>
+          asynInt32</td>
+        <td>
+          r/w</td>
+        <td>
+          All</td>
+        <td>
+          The number of acquisitions to acquire when AcquireMode=Multiple. An acquisition
+          is complete when the callbacks are called. This normally occurs when the AveragingTime
+          has elapsed. However when TriggerMode=Ext. Bulb then the callbacks are called and
+          an acquisition is complete on the trailing edge of each external gate pulse.</td>
+      </tr>
+      <tr>
+        <td>
+          QE_NUM_ACQUIRED</td>
+        <td>
+          $(P)$(R)NumAcquired</td>
+        <td>
+          longin</td>
+        <td>
+          asynInt32</td>
+        <td>
+          r/o</td>
+        <td>
+          All</td>
+        <td>
+          The number of acquisitions completed since Acquire was set to 1.</td>
       </tr>
       <tr>
         <td>
@@ -871,13 +988,29 @@
         <td>
           TetrAMM, AH501 and AH401 series</td>
         <td>
-          Controls whether acquisition is free-running ("Internal") or triggered by an external
-          pulse ("Ext. Trigger") or an external gate ("Ext. Gate"). All models support "Internal".
-          The TetrAMM also supports "Ext. Trigger" and "Ext. Gate". The AH401B supports "Ext.
-          Trigger", and the AH501D supports "Ext. Gate". In "Ext. Gate" mode the meter acquires
-          data only when the trigger is in the logic high state. This allows it to be controlled
-          by a scaler gate output signal, so that the meter is acquiring for the same time
-          period as the scaler, for example.</td>
+          Allowed choices are:
+          <ul>
+            <li>0: "Free Run" (all models). Ignores any external gate or trigger signal.</li>
+            <li>1: "Software" (possible future choice for TetrAMM) This will trigger a single
+              acquisition each time a software trigger command is sent.</li>
+            <li>2: "Ext. Trigger" (AH401B, TetrAMM) This is an edge-sensitive trigger. On the
+              TetrAMM this will collect samples for the AveragingTime and then wait for the next
+              trigger. NOTE: This currently only works if AcquireMode=Single. Future TetrAMM firmware
+              should support this.</li>
+            <li>3: "Ext. Bulb" (AH501D, TetrAMM) This is a level-sensitive trigger. It acquires
+              data while the external gate signal is asserted. On the trailing edge of the gate
+              signal the callbacks will be called. In this mode the AveragingTime is ignored and
+              the averaging is done for all samples received between the leading and trailing
+              edge of a single gate pulse.</li>
+            <li>4: "Ext. Gate" (TetrAMM) This is a level sensitive gate. It acquires data while
+              the external gate signal is asserted. However, unlike Ext. Bulb the trailing edge
+              of the gate signal is ignored, and the averaging is done for NumAverage_RBV samples
+              as with Free Run mode. The difference is that the actual averaging time will be
+              longer than AveragingTime, and is controlled by the duty cycle of the external gate
+              pulse. If the external gate pulse is asserted 40% of the time, then the actual averaging
+              time will be AveragingTime * 2.5</li>
+          </ul>
+        </td>
       </tr>
       <tr>
         <td>
@@ -975,9 +1108,10 @@
           data. This is converted to double precision float for averaging and statistics.
           It is converted back to integer for the time series software, which requires integer
           data. The TetrAMM transmits double precision data in units of amps, so the values
-          are typically between 1e-4 to 1e-12. It is convenient to use a CurrentScale of 1e9,
-          for example, so that the data are displayed in units of nano-amps. They are then
-          reasonable sized integers, and the time series software can be used.</td>
+          are typically between 1e-4 to 1e-12. It is convenient to use a CurrentScale of 1e9
+          or 1e12, for example, so that the data are displayed in units of nano-amps or pico-amps.
+          They are then reasonable sized integers, and the time series software can be used.
+        </td>
       </tr>
       <tr>
         <td>
@@ -1035,16 +1169,14 @@
       </tr>
     </tbody>
   </table>
+  <h3 id="AcquisitionModes">
+    Acquisition Modes</h3>
   <p>
-    This is the medm screen to control the quadEM with the records in quadEM.template.</p>
-  <div style="text-align: center">
-    <h3 style="text-align: center">
-      quadEM.adl</h3>
-    <img alt="quadEM.png" src="quadEM.png" /></div>
-  <h3 id="H1">
-    TetrAMM Acquisition Modes</h3>
+    The following tables describe the behavior of the different models for combinations
+    of AcquireMode and TriggerMode. Note that AcquireMode=Single is completely equivalent
+    to AcquireMode=Multiple and NumAcquire=1, so the tables do not list AcquireMode=Single.</p>
   <p>
-    The TetrAMM can be used in 6 different acquisition modes, depending on the values
+    The TetrAMM can be used in 8 different acquisition modes, depending on the values
     of the TriggerMode and AcquireMode records. The following table describes these
     modes.</p>
   <table border="1" cellpadding="2" cellspacing="2" style="text-align: left">
@@ -1065,7 +1197,7 @@
       </tr>
       <tr>
         <td>
-          Internal</td>
+          Free Run</td>
         <td>
           Continuous</td>
         <td>
@@ -1076,15 +1208,15 @@
       </tr>
       <tr>
         <td>
-          Internal</td>
+          Free Run</td>
         <td>
-          One-shot</td>
+          Multiple</td>
         <td>
-          A single set of data is acquired for the AveragingTime and then acquisition stops.
-          The plugins will be called only once when the the requested number of samples have
-          been received.</td>
+          Data is acquired for the AveragingTime. This is repeated NumAcquire times and then
+          acquisition stops. The plugins will be called NumAcquire times, each time with NumAverage
+          samples.</td>
         <td>
-          NRSAMP=ValuesPerRead, NAQ=AveragingTime*10e6/ValuesPerRead, TRG:OFF</td>
+          NRSAMP=ValuesPerRead, NAQ=0, TRG:OFF</td>
       </tr>
       <tr>
         <td>
@@ -1094,21 +1226,55 @@
         <td>
           A fixed number of samples is acquired starting on each rising edge of the external
           trigger input. AveragingTime must be set to a value less than the time between trigger
-          pulses.</td>
+          pulses.
+          <br />
+          NOTE: This does not work in the current firmware version because once NAQ samples
+          are acquired the TetrAMM stops acquisition.</td>
         <td>
-          NRSAMP=AveragingTime/10e6, NAQ=0, TRG:ON</td>
+          NRSAMP=ValuesPerRead, NAQ=AveragingTime/1e5/ValuesPerRead, TRG:ON</td>
       </tr>
       <tr>
         <td>
           Ext. Trig.</td>
         <td>
-          One-shot</td>
+          Multiple</td>
         <td>
           A fixed number of samples is acquired starting on the first rising edge of the external
-          trigger input and then acquisition stops. ValuesPerRead must be set to a value less
-          than AveragingTime/10e6.</td>
+          trigger input. This repeats NumAcquire times and then acquisition stops. ValuesPerRead
+          must be set to a value less than AveragingTime/1e5.
+          <br />
+          NOTE: This only works for AcquireMode=Single in the current firmware version because
+          once NAQ samples are acquired the TetrAMM stops acquisition. That is OK for AcquireMode=Single,
+          but not when NumAcquire &gt; 1.</td>
         <td>
-          NRSAMP=ValuesPerRead, NAQ=AveragingTime*10e6/ValuesPerRead, TRG:ON</td>
+          NRSAMP=ValuesPerRead, NAQ=AveragingTime*1e5/ValuesPerRead, TRG:ON</td>
+      </tr>
+      <tr>
+        <td>
+          Ext. Bulb</td>
+        <td>
+          Continuous</td>
+        <td>
+          Samples are acquired while the external trigger input is asserted. On each trailing
+          edge of the external trigger signal the plugins are called. ValuesPerRead must be
+          set to a value less than (external trigger asserted time * 1e5). AveragingTime is
+          ignored in this mode.</td>
+        <td>
+          NRSAMP=ValuesPerRead, NAQ=0, TRG:ON</td>
+      </tr>
+      <tr>
+        <td>
+          Ext. Bulb</td>
+        <td>
+          Multiple</td>
+        <td>
+          Samples are acquired while the external trigger input is asserted. On each trailing
+          edge of the external trigger signal the plugins are called. This is repeated NumAcquire
+          times and then acquisition is stopped. ValuesPerRead must be set to a value less
+          than (external trigger asserted time * 1e5). AveragingTime is ignored in this mode.
+        </td>
+        <td>
+          NRSAMP=ValuesPerRead, NAQ=0, TRG:ON</td>
       </tr>
       <tr>
         <td>
@@ -1116,9 +1282,12 @@
         <td>
           Continuous</td>
         <td>
-          Samples are acquired while the external trigger input is high. On each falling edge
-          of the external trigger signal the plugins are called. ValuesPerRead must be set
-          to a value less than (external trigger high time * 100000).</td>
+          Samples are acquired while the external trigger input is asserted. When NumAverage
+          samples have been acquired the plugins are called. The actual averaging time between
+          calling the plugins will be longer than AverageTime, and is controlled by the duty
+          cycle of the external gate signal. The trailing edge of the gate pulse is ignored
+          in this mode. ValuesPerRead must be set to a value less than (external trigger asserted
+          time * 1e5).</td>
         <td>
           NRSAMP=ValuesPerRead, NAQ=0, TRG:ON</td>
       </tr>
@@ -1126,17 +1295,27 @@
         <td>
           Ext. Gate</td>
         <td>
-          One-shot</td>
+          Multiple</td>
         <td>
-          Samples are acquired while the external trigger input is high. On the first falling
-          edge of the external trigger signal the plugins are called and acquisition stops.
-          ValuesPerRead must be set to a value less than (external trigger high time * 100000).
-        </td>
+          Samples are acquired while the external trigger input is asserted. When NumAverage
+          samples have been acquired the plugins are called. The actual averaging time between
+          calling the plugins will be longer than AverageTime, and is controlled by the duty
+          cycle of the external gate signal. When the plugins have been called NumAcquire
+          times then acquisition is stopped. Note that the actual number of gate pulses received
+          will be &gt; NumAcquire, and is also controlled by the duty cycle of the external
+          gate signal. The trailing edge of the gate pulse is ignored in this mode. ValuesPerRead
+          must be set to a value less than (external trigger asserted time * 1e5).</td>
         <td>
           NRSAMP=ValuesPerRead, NAQ=0, TRG:ON</td>
       </tr>
     </tbody>
   </table>
+  <p>
+    This is the medm screen to control the quadEM with the records in quadEM.template.</p>
+  <div style="text-align: center">
+    <h3 style="text-align: center">
+      quadEM.adl</h3>
+    <img alt="quadEM.png" src="quadEM.png" /></div>
   <h3 id="Plugins">
     Plugins</h3>
   <p>
@@ -1252,13 +1431,13 @@
     Time Series</h3>
   <p>
     The quadEM_TimeSeries.template database provides a time-history (like a digital
-    scope) of the current, sum, difference and position at speeds up to 6510 Hz (AH501
-    series), 1000Hz (AH401 series) or 813 Hz (APS_EM). The time per point can be greater
-    than the sampling time, in which case it does averaging. It also optionally uses
-    FFTs to compute the frequency power-spectrum of each signal. The time-series support
-    requires the drvFastSweep driver from the synApps mca module, and also the quadEM_SNL
-    SNL program in this quadEM module. The time-series and frequency spectra are contained
-    in standard EPICS waveform records.</p>
+    scope) of the current, sum, difference and position at speeds up to 20000Hz (TetrAMM),
+    6510 Hz (AH501 series), 1000Hz (AH401 series) or 813 Hz (APS_EM). The time per point
+    can be greater than the sampling time, in which case it does averaging. It also
+    optionally uses FFTs to compute the frequency power-spectrum of each signal. The
+    time-series support requires the drvFastSweep driver from the synApps mca module,
+    and also the quadEM_SNL SNL program in this quadEM module. The time-series and frequency
+    spectra are contained in standard EPICS waveform records.</p>
   <table border="1" cellpadding="2" cellspacing="2" style="text-align: left">
     <tbody>
       <tr>
@@ -2567,8 +2746,14 @@ pattern
     Common Setup</h2>
   <p>
     All of the device-dependent startup scripts invoke <a href="quadEM_commonPlugins_cmd.html">
-      quadEM/iocBoot/iocTest/commonPlugins.cmd</a>. This file can be edited to add additional
+      quadEM/iocBoot/commonPlugins.cmd</a>. This file can be edited to add additional
     plugins, such as the TIFF, HDF5, or Nexus file writers, etc.</p>
+  <p>
+    Each iocBoot/iocXXX directory, e.g. iocBoot/iocTetrAMM, contains an example startup
+    script for Linux and Windows (st.cmd) and another for vxWorks (st.cmd.vxWorks).
+    Each of these startup scripts invokes the device-dependent startup script(s), e.g.
+    TetrAMM.cmd, NSLS_EM.cmd, etc.
+  </p>
   <h2 id="TetrAMM_Setup">
     TetrAMM Setup</h2>
   <p>
@@ -2578,7 +2763,7 @@ pattern
   <p>
     An example startup script for Linux or Windows is provided in
     <br />
-    <a href="quadEM_st_cmd_Tetra.html">quadEM/iocBoot/iocTest/st.cmd.Tetra</a>
+    <a href="quadEM_cmd_TetrAMM.html">quadEM/iocBoot/iocTetrAMM/TetraAMM.cmd</a>
   </p>
   <p>
     This will need to be edited to set the correct IP address of the meter to be used.</p>
@@ -2587,23 +2772,41 @@ pattern
   <p>
     These meters communicate via IP, so they must be configured with an IP address reachable
     from the host IOC machine. The Lantronix module in the meters can be configured
-    to use either UDP (recommended to reduce CPU load, particularly on AH501 series)
-    or TCP. The startup script must include the UDP qualifier on the drvAsynIPPortConfigure
-    command if UDP is selected.</p>
+    to use either UDP or TCP. UDP can reduce CPU load, however it is more susceptible
+    to synchronization problems since it does not retransmit dropped packets. The startup
+    script must include the UDP qualifier on the drvAsynIPPortConfigure command if UDP
+    is selected.</p>
   <p>
     Example startup scripts for Linux or Windows are provided in
     <br />
-    <a href="quadEM_st_cmd_AH401B.html">quadEM/iocBoot/iocTest/st.cmd.AH401B</a> and
+    <a href="quadEM_cmd_AH401B.html">quadEM/iocBoot/iocAH401B/AH401B.cmd</a> and
     <br />
-    <a href="quadEM_st_cmd_AH501.html">quadEM/iocBoot/iocTest/st.cmd.AH501</a>
+    <a href="quadEM_cmd_AH501.html">quadEM/iocBoot/iocAH501/AH501.cmd</a>
   </p>
   <p>
     These will need to be edited to set the correct IP address of the meters to be used.</p>
   <p>
     These scripts each invoke a generic script:
     <br />
-    <a href="quadEM_st_cmd_AHxxx.html">quadEM/iocBoot/iocTest/st.cmd.AHxxx</a>.
+    <a href="quadEM_cmd_AHxxx.html">quadEM/iocBoot/AHxxx.cmd</a>.
   </p>
+  <h2 id="NSLS_EM_Setup">
+    NSLS_EM Setup</h2>
+  <p>
+    These meters communicate via IP. They only support DHCP, they cannot be given a
+    static IP address. Each module on the subnet must have a unique Module ID, which
+    is set by a 16-position rotary switch on the device front panel. The driver sends
+    a broadcast message on the subnet to determine the Module ID and current IP address
+    of all NSLS_EM modules. If the specified module ID is found then it configures communication
+    to that module by calling drvAsynIPPortConfigure internally.</p>
+  <p>
+    An example startup script for Linux or Windows is provided in
+    <br />
+    <a href="quadEM_cmd_NSLS_EM.html">quadEM/iocBoot/iocNSLS_EM/NSLS_EM.cmd</a>
+  </p>
+  <p>
+    This will need to be edited to set the broadcast address of the network the device
+    is connected to, and the Module ID of the device.</p>
   <h2 id="APS_EM_Setup">
     APS Electrometer Setup</h2>
   <p>
@@ -2618,13 +2821,13 @@ pattern
   <p>
     An example startup script for vxWorks is provided in
     <br />
-    <a href="quadEM_st_cmd_vxWorks.html">quadEM/iocBoot/iocTest/st.cmd.vxWorks</a>.
+    <a href="quadEM_st_cmd_vxWorks.html">quadEM/iocBoot/iocAPS_EM/st.cmd.vxWorks</a>.
   </p>
   <p>
     This example startup script can be edited to start either the APS_EM, the TetrAMM,
     the AH401B, or the AH501. For the APS_EM this script invokes
     <br />
-    <a href="quadEM_st_cmd_APS_EM.html">quadEM/iocBoot/iocTest/st.cmd.APS_EM</a>.
+    <a href="quadEM_cmd_APS_EM.html">quadEM/iocBoot/iocAPS_EM/APS_EM.cmd</a>.
   </p>
 </body>
 </html>

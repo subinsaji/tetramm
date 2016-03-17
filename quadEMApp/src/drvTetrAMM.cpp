@@ -30,7 +30,15 @@
 #include <epicsExport.h>
 #include "drvTetrAMM.h"
 
-#define TetrAMM_TIMEOUT 1.0
+#define TetrAMM_TIMEOUT 0.01
+#define MIN_VALUES_PER_READ_BINARY 5
+#define MIN_VALUES_PER_READ_ASCII 500
+#define MAX_VALUES_PER_READ 100000
+// Size of read buffer for binary data.  The max required for data is 40 bytes (4 doubles + NaN)
+// We make it twice this size for doing synchonization so it is guaranteed to contain intact NaN
+#define BINARY_BUFFER_SIZE 80
+// Size of read buffer for ASCII data in units of char
+#define ASCII_BUFFER_SIZE 150
 
 static const char *driverName="drvTetrAMM";
 static void readThread(void *drvPvt);
@@ -56,11 +64,12 @@ drvTetrAMM::drvTetrAMM(const char *portName, const char *QEPortName, int ringBuf
     QEPortName_ = epicsStrDup(QEPortName);
     
     acquireStartEvent_ = epicsEventCreate(epicsEventEmpty);
+    numResync_ = 0;
 
     // Connect to the server
     status = pasynOctetSyncIO->connect(QEPortName, 0, &pasynUserMeter_, NULL);
     if (status) {
-        printf("%s:%s: error calling pasynOctetSyncIO->connect, status=%d, error=%s\n", 
+        printf("%s::%s: error calling pasynOctetSyncIO->connect, status=%d, error=%s\n", 
                driverName, functionName, status, pasynUserMeter_->errorMessage);
         return;
     }
@@ -76,7 +85,7 @@ drvTetrAMM::drvTetrAMM(const char *portName, const char *QEPortName, int ringBuf
     // the reset() function which can be done later when the meter is online.
     lock();
     getFirmwareVersion();
-    drvQuadEM::reset();
+//    drvQuadEM::reset();
     unlock();
 
     /* Create the thread that reads the meter */
@@ -86,7 +95,7 @@ drvTetrAMM::drvTetrAMM(const char *portName, const char *QEPortName, int ringBuf
                           (EPICSTHREADFUNC)::readThread,
                           this) == NULL);
     if (status) {
-        printf("%s:%s: epicsThreadCreate failure, status=%d\n", driverName, functionName, status);
+        printf("%s::%s: epicsThreadCreate failure, status=%d\n", driverName, functionName, status);
         return;
     }
     callParamCallbacks();
@@ -117,7 +126,7 @@ asynStatus drvTetrAMM::sendCommand()
   if (status) goto error;
   if (strcmp(inString_, "ACK") != 0) {
       asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, 
-          "%s:%s: error, outString=%s expected ACK, received %s\n",
+          "%s::%s: error, outString=%s expected ACK, received %s\n",
           driverName, functionName, outString_, inString_);
       status = asynError;
       goto error;
@@ -161,18 +170,24 @@ void drvTetrAMM::readThread(void)
     asynStatus status;
     size_t nRead;
     int bytesPerValue=8;
+    int readFormat;
     int eomReason;
-    int acquireMode;
     int triggerMode;
-    int numAverage;
+    int nextExpectedEdge=0;
+    int numTrigStarts=0;
+    int numTrigEnds=0;
     int i;
     asynUser *pasynUser;
     asynInterface *pasynInterface;
     asynOctet *pasynOctet;
     void *octetPvt;
-    epicsFloat64 data[5];
-    long long *i64data = (long long *)data;
+    char charData[BINARY_BUFFER_SIZE];
+    epicsFloat64 *f64Data = (epicsFloat64 *)charData;
+    long long *i64Data = (long long *)charData;
+    unsigned char *pc;
     long long lastValue;
+    char ASCIIData[ASCII_BUFFER_SIZE];
+    char *inPtr;
     size_t nRequested;
     static const char *functionName = "readThread";
 
@@ -182,13 +197,13 @@ void drvTetrAMM::readThread(void)
     status = pasynManager->connectDevice(pasynUser, QEPortName_, 0);
     if(status!=asynSuccess) {
         asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-            "%s:%s: connectDevice failed, status=%d\n",
+            "%s::%s: connectDevice failed, status=%d\n",
             driverName, functionName, status);
     }
     pasynInterface = pasynManager->findInterface(pasynUser, asynOctetType, 1);
     if(!pasynInterface) {;
         asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-            "%s:%s: findInterface failed for asynOctet, status=%d\n",
+            "%s::%s: findInterface failed for asynOctet, status=%d\n",
             driverName, functionName, status);
     }
     pasynOctet = (asynOctet *)pasynInterface->pinterface;
@@ -202,69 +217,169 @@ void drvTetrAMM::readThread(void)
             unlock();
             (void)epicsEventWait(acquireStartEvent_);
             lock();
-            readingActive_ = 1;
-            numAcquired_ = 0;
-            getIntegerParam(P_AcquireMode, &acquireMode);
+            acquiring_ = 1;
+            numTrigEnds = 0;
+            numTrigStarts = 0;
+            nextExpectedEdge = 0;
             getIntegerParam(P_TriggerMode, &triggerMode);
-            getIntegerParam(P_NumAverage, &numAverage);
+            getIntegerParam(P_ReadFormat, &readFormat);
+            readingActive_ = 1;
         }
-        nRequested = (numChannels_ + 1) * bytesPerValue;
-        unlock();
-        pasynManager->lockPort(pasynUser);
-        status = pasynOctet->read(octetPvt, pasynUser, (char*)data, nRequested, 
-                                  &nRead, &eomReason);
-        pasynManager->unlockPort(pasynUser);
-        lock();
+        if (readFormat == QEReadFormatBinary) {
+            nRequested = (numChannels_ + 1) * bytesPerValue;
+            unlock();
+            pasynManager->lockPort(pasynUser);
+            status = pasynOctet->read(octetPvt, pasynUser, charData, nRequested, 
+                                      &nRead, &eomReason);
+            pasynManager->unlockPort(pasynUser);
+            lock();
 
-        if ((status == asynSuccess) && (nRead == nRequested) && (eomReason == ASYN_EOM_CNT)) {
+            if ((status != asynSuccess) || 
+                (nRead  != nRequested)  || 
+                (eomReason != ASYN_EOM_CNT)) {
+                if (status != asynTimeout) {
+                    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, 
+                        "%s::%s: unexpected error reading meter status=%d, nRead=%lu, eomReason=%d\n", 
+                        driverName, functionName, status, (unsigned long)nRead, eomReason);
+                    // We got an error reading the meter, it is probably offline.  
+                    // Wait 1 second before trying again.
+                    unlock();
+                    epicsThreadSleep(1.0);
+                    lock();
+                }
+                continue;
+            }
             // If we are on a little-endian machine we need to swap the byte order
             if (EPICS_BYTE_ORDER == EPICS_ENDIAN_LITTLE) {
-                for (i=0; i<=numChannels_; i++) swapDouble((char *)&data[i]);
+                for (i=0; i<=numChannels_; i++) swapDouble(charData + i*bytesPerValue);
             }
-            lastValue = i64data[numChannels_];
+            lastValue = i64Data[numChannels_];
             switch(lastValue) {
                 case 0xfff40002ffffffffll:
                     // This is a signalling Nan at the end of normal data
-                    for (i=numChannels_; i<4; i++) data[i] = 0.0;
-                    computePositions(data);
-                    numAcquired_++;
-                    if ((acquireMode == QEAcquireModeOneShot) &&
-                        (triggerMode == QETriggerModeInternal) &&
-                        (numAcquired_ >= numAverage)) {
-                        acquiring_ = 0;
-                    }
-                    if ((acquireMode == QEAcquireModeContinuous) &&
-                        (triggerMode == QETriggerModeExtTrigger)) {
-                        triggerCallbacks();
-                    }
-                    break;
+                    for (i=numChannels_; i<4; i++) f64Data[i] = 0.0;
+                    computePositions(f64Data);
+                   break;
                 case 0xfff40000ffffffffll:
                     // This is a signalling Nan on the rising edge of a trigger
+                    numTrigStarts++;
+                    if (nextExpectedEdge != 0) {
+                        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, 
+                            "%s::%s Extra trigger start, numTrigStarts=%d, numTrigsEnds=%d\n", 
+                             driverName, functionName, numTrigStarts, numTrigEnds);
+                    }
+                    nextExpectedEdge = 1;
                     break;
                 case 0xfff40001ffffffffll:
                     // This is a signalling Nan on the falling edge of a trigger
-                    // Trigger callbacks
-                    if (triggerMode == QETriggerModeExtGate) {
-                        acquiring_ = 0;
+                    numTrigEnds++;
+                    if (triggerMode == QETriggerModeExtBulb) {
                         triggerCallbacks();
                     }
+                    if (nextExpectedEdge != 1) {
+                        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, 
+                            "%s::%s Extra trigger end, numTrigStarts=%d, numTrigsEnds=%d\n", 
+                             driverName, functionName, numTrigStarts, numTrigEnds);
+                    }
+                    nextExpectedEdge = 0;
                     break;
-                default:
-                    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, 
-                        "%s:%s: did not get S_NAN when expected, got=0x%llx\n", 
-                        driverName, functionName, (long long)lastValue);
+                default: 
+                    // We have lost sync, probably due to a dropped packet.
+                    // Recover sync by reading 2 times length per sample, which is enough to guarantee that
+                    // it will contain a NaN unless we are losing many packets
+                    asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, 
+                            "%s::%s: warning, lost sync, no NaN where expected; resynchronizing\n", 
+                            driverName, functionName);
+                    unlock();
+                    pasynManager->lockPort(pasynUser);
+                    nRequested = ((numChannels_ + 1) * bytesPerValue)*2;
+                    status = pasynOctet->read(octetPvt, pasynUser, charData, nRequested, 
+                                              &nRead, &eomReason);
+                    for (i=0; i<(BINARY_BUFFER_SIZE-bytesPerValue); i++) {
+                        pc = (unsigned char *)charData + i;
+                        if (pc[0]==0xff && pc[1]==0xf4 && pc[2]==0x00 && pc[3]==0x02 &&
+                            pc[4]==0xff && pc[5]==0xff && pc[6]==0xff && pc[7]==0xff) {
+                            // We need to read (BINARY_BUFFER_SIZE - bytesPerValue - i) bytes
+                            nRequested = nRequested - bytesPerValue - i;
+                            status = pasynOctet->read(octetPvt, pasynUser, charData, nRequested, 
+                                                      &nRead, &eomReason);
+                            numResync_++;
+                            asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER, 
+                                "%s::%s: found NaN at position %d, read %d bytes\n", 
+                                driverName, functionName, i, (int)nRequested);
+                            break;
+                         }
+                    }
+                    if (i == (BINARY_BUFFER_SIZE-bytesPerValue)) {
+                        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, 
+                            "%s::%s: ERROR, did not find NaN\n", 
+                            driverName, functionName);
+                        asynPrintIO(pasynUserSelf, ASYN_TRACE_ERROR, charData, nRead,
+                            "%s::%s: buffer read when resynchronizing\n", 
+                            driverName, functionName);
+                    }
+                    pasynManager->unlockPort(pasynUser);
+                    lock();
                     break;
             }
-        } else if (status != asynTimeout) {
-            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, 
-                "%s:%s: unexpected error reading meter status=%d, nRead=%lu, eomReason=%d\n", 
-                driverName, functionName, status, (unsigned long)nRead, eomReason);
-            // We got an error reading the meter, it is probably offline.  
-            // Wait 1 second before trying again.
-            unlock();
-            epicsThreadSleep(1.0);
-            lock();
         }
+        else {  // ASCII format
+            nRequested = sizeof(ASCIIData);
+            unlock();
+            pasynManager->lockPort(pasynUser);
+            status = pasynOctet->read(octetPvt, pasynUser, ASCIIData, nRequested, 
+                                      &nRead, &eomReason);
+            pasynManager->unlockPort(pasynUser);
+            lock();
+
+            if ((status != asynSuccess) || 
+                (eomReason != ASYN_EOM_EOS)) {
+                if (status != asynTimeout) {
+                    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, 
+                        "%s::%s: unexpected error reading meter status=%d, nRead=%lu, eomReason=%d\n", 
+                        driverName, functionName, status, (unsigned long)nRead, eomReason);
+                    // We got an error reading the meter, it is probably offline.  
+                    // Wait 1 second before trying again.
+                    unlock();
+                    epicsThreadSleep(1.0);
+                    lock();
+                }
+                continue;
+            }
+
+            if (strstr(ASCIIData, "SEQNR") != 0) {
+                // This is the rising edge of a trigger
+                numTrigStarts++;
+                if (nextExpectedEdge != 0) {
+                    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, 
+                        "%s::%s Extra trigger start, numTrigStarts=%d, numTrigsEnds=%d\n", 
+                         driverName, functionName, numTrigStarts, numTrigEnds);
+                }
+                nextExpectedEdge = 1;
+            } 
+            else if (strstr(ASCIIData, "EOTRG") != 0) {
+                // This is the falling edge of a trigger
+                numTrigEnds++;
+                if (triggerMode == QETriggerModeExtBulb) {
+                    triggerCallbacks();
+                }
+                if (nextExpectedEdge != 1) {
+                    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, 
+                        "%s::%s Extra trigger end, numTrigStarts=%d, numTrigsEnds=%d\n", 
+                         driverName, functionName, numTrigStarts, numTrigEnds);
+                }
+                nextExpectedEdge = 0;
+            }
+            else {
+                inPtr = ASCIIData;
+                for (i=0; i<numChannels_; i++) {
+                    f64Data[i] = strtod(inPtr, &inPtr);
+                }
+                for (i=numChannels_; i<4; i++) f64Data[i] = 0.0;
+                computePositions(f64Data);
+            }
+        }
+        callParamCallbacks();
     }
 }
 
@@ -314,30 +429,19 @@ asynStatus drvTetrAMM::setAcquire(epicsInt32 value)
     size_t nread;
     size_t nwrite;
     asynStatus status=asynSuccess;
-    //asynStatus readStatus;
     int eomReason;
-    int triggerMode;
-    int numAverage;
-    int acquireMode;
-    int valuesPerRead;
-    int nrsamp;
-    int naq;
-    char dummyIn[MAX_COMMAND_LEN];
+    int readFormat;
+    char response[MAX_COMMAND_LEN];
     static const char *functionName = "setAcquire";
 
     // Return without doing anything if value=1 and already acquiring
     if ((value == 1) && (acquiring_)) return asynSuccess;
     
-    getIntegerParam(P_TriggerMode,   &triggerMode);
-    getIntegerParam(P_AcquireMode,   &acquireMode);
-    getIntegerParam(P_NumAverage,    &numAverage);
-    getIntegerParam(P_ValuesPerRead, &valuesPerRead);
-
     // Make sure the input EOS is set
     status = pasynOctetSyncIO->setInputEos(pasynUserMeter_, "\r\n", 2);
     if (status) {
         asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-            "%s:%s: error calling pasynOctetSyncIO->setInputEos, status=%d\n",
+            "%s::%s: error calling pasynOctetSyncIO->setInputEos, status=%d\n",
             driverName, functionName, status);
         return asynError;
     }
@@ -352,65 +456,51 @@ asynStatus drvTetrAMM::setAcquire(epicsInt32 value)
         // Setting this flag tells the read thread to stop
         acquiring_ = 0;
         // Wait for the read thread to stop
-        asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "Waiting for read thread to stop\n");
         while (readingActive_) {
             unlock();
             epicsThreadSleep(0.01);
             lock();
         }
-        asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "Read thread stopped\n");
-        while (1) {
-            status = pasynOctetSyncIO->writeRead(pasynUserMeter_, "ACQ:OFF", strlen("ACQ:OFF"), 
-                        dummyIn, MAX_COMMAND_LEN, TetrAMM_TIMEOUT, &nwrite, &nread, &eomReason);
-            if (status) {
-                asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-                    "%s:%s: error calling pasynOctetSyncIO->writeRead, status=%d, error=\"%s\"\n",
-                    driverName, functionName, status, pasynUserMeter_->errorMessage);
-                break;
+        status = pasynOctetSyncIO->writeRead(pasynUserMeter_, "ACQ:OFF", strlen("ACQ:OFF"), 
+            response, sizeof(response), TetrAMM_TIMEOUT, &nwrite, &nread, &eomReason);
+        if ((status != asynSuccess) || (nread != 3) || (strcmp(response, "ACK") != 0)) {
+            while (1) {
+                // Read until the read terminated on EOS (\r\n) and last 3 characters of the response
+                // are ACK or until we get a timeout.  
+                // A timeout should only happen if the ACK\r\n response spanned the response array size
+                status = pasynOctetSyncIO->read(pasynUserMeter_, response, sizeof(response), 
+                                                TetrAMM_TIMEOUT, &nread, &eomReason);
+                if ((status == asynSuccess) && (eomReason == ASYN_EOM_EOS) &&
+                    (nread >= 3) && (strncmp(&response[nread-3], "ACK", 3) == 0)) break;
+                if (status == asynTimeout) continue;
+                asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, 
+                  "%s::%s waiting for ACK response, nread=%d\n",
+                  driverName, functionName, (int)nread);
             }
-            // Now do flush and read with short timeout to flush any responses
-//            nread = 0;
-//            readStatus = pasynOctetSyncIO->flush(pasynUserMeter_);
-//            readStatus = pasynOctetSyncIO->read(pasynUserMeter_, dummyIn, MAX_COMMAND_LEN, .5, 
-//                                                &nread, &eomReason);
-//            if ((readStatus == asynTimeout) && (nread == 0)) break;
-            break;
         }
+        // Call the base class function in case anything needs to be done there.
+        drvQuadEM::setAcquire(0);
     } else {
-        // Make sure the meter is in binary mode
-        strcpy(outString_, "ASCII:OFF");
-        writeReadMeter();
-        
-        nrsamp = valuesPerRead;
-        if ((triggerMode == QETriggerModeExtTrigger) && 
-            (acquireMode == QEAcquireModeOneShot)) {
-            nrsamp = numAverage * valuesPerRead;
-        }
-        
-        // Send the NRSAMP command
-        sprintf(outString_, "NRSAMP:%d", nrsamp);
-        writeReadMeter();
-        
-        // Send the TRG:OFF or TRG:ON command
-        sprintf(outString_, "TRG:%s", (triggerMode == QETriggerModeInternal) ? "OFF" : "ON");
-        writeReadMeter();
+        // Call the base class function because it handles some common tasks.
+        drvQuadEM::setAcquire(1);
 
-        // Send the NAQ command
-        naq = 0;
-        if (((triggerMode == QETriggerModeExtTrigger) || 
-             (triggerMode == QETriggerModeInternal)) && 
-             (acquireMode == QEAcquireModeOneShot)) {
-            naq = numAverage;
-        }        
-        sprintf(outString_, "NAQ:%d", naq);
-        writeReadMeter();
-
+        // For now we call setAcquireParams().  This seems to be necessary when sending NAQ, and only takes 20 ms.
+        // It also has the effect of flusing any stale input
+        setAcquireParams();
         status = pasynOctetSyncIO->write(pasynUserMeter_, "ACQ:ON", strlen("ACQ:ON"), 
                             TetrAMM_TIMEOUT, &nwrite);
-        status = pasynOctetSyncIO->setInputEos(pasynUserMeter_, "", 0);
+        getIntegerParam(P_ReadFormat, &readFormat);
+        if (readFormat == QEReadFormatBinary) {
+            status = pasynOctetSyncIO->setInputEos(pasynUserMeter_, "", 0);
+        }
         // Notify the read thread if acquisition status has started
         epicsEventSignal(acquireStartEvent_);
-        acquiring_ = 1;
+        // Wait for the read thread to start
+        while (!readingActive_) {
+            unlock();
+            epicsThreadSleep(0.01);
+            lock();
+        }
     }
     if (status) {
         acquiring_ = 0;
@@ -418,40 +508,113 @@ asynStatus drvTetrAMM::setAcquire(epicsInt32 value)
     return status;
 }
 
-/** Sets the range 
-  * \param[in] value The desired range.
-  */
-asynStatus drvTetrAMM::setRange(epicsInt32 value) 
+
+asynStatus drvTetrAMM::setAcquireParams()
 {
-    asynStatus status;
+    int numAverage;
+    int acquireMode;
+    int valuesPerRead;
+    int readFormat;
+    int naq;
+    int range;
+    int numChannels;
+    int triggerMode;
+    double sampleTime;
+    double averagingTime;
+    int prevAcquiring;
+    static const char *functionName = "setAcquireParams";
+
+    prevAcquiring = acquiring_;
+    if (prevAcquiring) setAcquire(0);
+
+    getIntegerParam(P_Range,         &range);
+    getIntegerParam(P_NumChannels,   &numChannels);
+    getIntegerParam(P_TriggerMode,   &triggerMode);
+    getIntegerParam(P_AcquireMode,   &acquireMode);
+    getIntegerParam(P_ValuesPerRead, &valuesPerRead);
+    getIntegerParam(P_ReadFormat,    &readFormat);
+    getDoubleParam (P_AveragingTime, &averagingTime);
+
+    // Certain combinations are not yet supported
+    if ((triggerMode == QETriggerModeExtTrigger) &&
+        ((acquireMode == QEAcquireModeContinuous) ||
+         (acquireMode == QEAcquireModeMultiple))) {
+        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
+            "%s::%s Error, TriggerMode=External Trigger is currently only supported for AcquireMode=One-Shot\n",
+            driverName, functionName);
+        return asynError;
+    }
+
+    // Compute the sample time.  This is 10 microseconds times valuesPerRead. 
+    sampleTime = 10e-6 * valuesPerRead;
+    setDoubleParam(P_SampleTime, sampleTime);
+
+    // Compute the number of values that will be accumulated in the ring buffer before averaging
+    if (triggerMode == QETriggerModeExtBulb) {
+        numAverage = 0;
+    } else {
+        numAverage = (int)((averagingTime / sampleTime) + 0.5);
+    }
+    setIntegerParam(P_NumAverage, numAverage);
+
+    epicsSnprintf(outString_, sizeof(outString_), "RNG:%d", range);
+    writeReadMeter();
+
+    epicsSnprintf(outString_, sizeof(outString_), "CHN:%d", numChannels);
+    writeReadMeter();
+
+    // Set the desired read format
+    if (readFormat == QEReadFormatBinary) {
+        strcpy(outString_, "ASCII:OFF");
+    } else {
+        strcpy(outString_, "ASCII:ON");
+    }
+    writeReadMeter();
+
+    if (valuesPerRead > MAX_VALUES_PER_READ ) valuesPerRead = MAX_VALUES_PER_READ;
+    if (readFormat == QEReadFormatBinary) {
+        if (valuesPerRead < MIN_VALUES_PER_READ_BINARY) valuesPerRead = MIN_VALUES_PER_READ_BINARY;
+    } else {
+        if (valuesPerRead < MIN_VALUES_PER_READ_ASCII) valuesPerRead = MIN_VALUES_PER_READ_ASCII;
+    }
+
+    // Send the NRSAMP command
+    sprintf(outString_, "NRSAMP:%d", valuesPerRead);
+    writeReadMeter();
+
+    // Send the TRG:OFF or TRG:ON command
+    sprintf(outString_, "TRG:%s", (triggerMode == QETriggerModeFreeRun) ? "OFF" : "ON");
+    writeReadMeter();
+
+    // Send the NAQ command
+    naq = 0;
+    if (((triggerMode == QETriggerModeExtTrigger) || 
+         (triggerMode == QETriggerModeFreeRun)) && 
+         (acquireMode == QEAcquireModeSingle)) {
+        naq = numAverage;
+    }        
+    sprintf(outString_, "NAQ:%d", naq);
+    writeReadMeter();
     
-    epicsSnprintf(outString_, sizeof(outString_), "RNG:%d", value);
-    status = sendCommand();
-    return status;
+    if (prevAcquiring) setAcquire(1);    
+    return asynSuccess;
 }
 
-/** Sets the number of channels.
-  * \param[in] value Number of channels to measure (1, 2, or 4).
+
+/** Sets the acquire mode.
+  * \param[in] value Acquire mode.
   */
-asynStatus drvTetrAMM::setNumChannels(epicsInt32 value) 
-{
-    asynStatus status;
-    
-    epicsSnprintf(outString_, sizeof(outString_), "CHN:%d", value);
-    status = sendCommand();
-    return status;
+asynStatus drvTetrAMM::setAcquireMode(epicsInt32 value) 
+{    
+    return setAcquireParams();
 }
 
-/** Sets the values per read.
-  * \param[in] value Values per read. Minimum depends on number of channels.
+/** Sets the averaging time.
+  * \param[in] value Averaging time.
   */
-asynStatus drvTetrAMM::setValuesPerRead(epicsInt32 value) 
-{
-    asynStatus status;
-    
-    epicsSnprintf(outString_, sizeof(outString_), "NRSAMP:%d", value);
-    status = sendCommand();
-    return status;
+asynStatus drvTetrAMM::setAveragingTime(epicsFloat64 value) 
+{    
+    return setAcquireParams();
 }
 
 /** Sets the bias state.
@@ -499,6 +662,56 @@ asynStatus drvTetrAMM::setBiasInterlock(epicsInt32 value)
     epicsSnprintf(outString_, sizeof(outString_), "INTERLOCK:%s",  value ? "ON" : "OFF");
     status = sendCommand();
     return status;
+}
+
+/** Sets the number of channels.
+  * \param[in] value Number of channels to measure (1, 2, or 4).
+  */
+asynStatus drvTetrAMM::setNumChannels(epicsInt32 value) 
+{    
+    return setAcquireParams();
+}
+
+/** Sets the number of triggers.
+  * \param[in] value Number of triggers. 
+  */
+asynStatus drvTetrAMM::setNumAcquire(epicsInt32 value) 
+{    
+    return setAcquireParams();
+}
+
+/** Sets the range 
+  * \param[in] value The desired range.
+  */
+asynStatus drvTetrAMM::setRange(epicsInt32 value) 
+{
+    return setAcquireParams();
+}
+
+/** Sets the read format
+  * \param[in] value Read format (QEReadFormatBinary or QEReadFormatASCII).
+  */
+asynStatus drvTetrAMM::setReadFormat(epicsInt32 value) 
+{    
+    return setAcquireParams();
+}
+
+/** Sets the trigger mode
+  * \param[in] value 0 = internal,
+  *                  1 = external trigger (with predefined nr of samples)
+  *                  2 = external gate.
+  */
+asynStatus drvTetrAMM::setTriggerMode(epicsInt32 value)
+{
+    return setAcquireParams();
+}
+
+/** Sets the values per read.
+  * \param[in] value Values per read. Minimum depends on number of channels.
+  */
+asynStatus drvTetrAMM::setValuesPerRead(epicsInt32 value) 
+{    
+    return setAcquireParams();
 }
 
 /** Reads all the settings back from the electrometer.
@@ -565,7 +778,7 @@ asynStatus drvTetrAMM::readStatus()
     // Compute the number of values that will be accumulated in the ring buffer before averaging
     getDoubleParam(P_AveragingTime, &averagingTime);
     getIntegerParam(P_TriggerMode, &triggerMode);
-    if (triggerMode == QETriggerModeExtGate) {
+    if (triggerMode == QETriggerModeExtBulb) {
         numAverage = 0;
     } else {
         numAverage = (int)((averagingTime / sampleTime) + 0.5);
@@ -578,7 +791,7 @@ asynStatus drvTetrAMM::readStatus()
 
     error:
     asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-        "%s:%s: error, outString=%s, inString=%s\n",
+        "%s::%s: error, outString=%s, inString=%s\n",
         driverName, functionName, outString_, inString_);
     return asynError;
 }
@@ -597,8 +810,25 @@ void drvTetrAMM::exitHandler()
   */
 void drvTetrAMM::report(FILE *fp, int details)
 {
-    fprintf(fp, "%s: port=%s, IP port=%s, firmware version=%s\n",
-            driverName, portName, QEPortName_, firmwareVersion_);
+    fprintf(fp, "%s: port=%s, IP port=%s, firmware version=%s, numResync=%d\n",
+            driverName, portName, QEPortName_, firmwareVersion_, numResync_);
+    if (details > 0) {
+        int prevAcquiring = acquiring_;
+        setAcquire(0);
+        sprintf(outString_, "%s", "IFCONFIG");
+        writeReadMeter();
+        fprintf(fp, "IFCONFIG response from meter:\n");
+        fprintf(fp, "%s\n", inString_);
+        sprintf(outString_, "%s", "IFCONFIG:LINK");
+        writeReadMeter();
+        fprintf(fp, "IFCONFIG:LINK: response from meter:\n");
+        fprintf(fp, "%s\n", inString_);
+        sprintf(outString_, "%s", "IFCONFIG:ICMP");
+        writeReadMeter();
+        fprintf(fp, "IFCONFIG:ICMP: response from meter:\n");
+        fprintf(fp, "%s\n", inString_);
+        if (prevAcquiring) setAcquire(1);
+    }   
     drvQuadEM::report(fp, details);
 }
 

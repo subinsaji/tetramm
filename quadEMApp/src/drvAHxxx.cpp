@@ -28,7 +28,7 @@
 #include <epicsExport.h>
 #include "drvAHxxx.h"
 
-#define AHxxx_TIMEOUT 1.0
+#define AHxxx_TIMEOUT 0.02
 #define MIN_INTEGRATION_TIME 0.001
 #define MAX_INTEGRATION_TIME 1.0
 
@@ -165,8 +165,7 @@ void drvAHxxx::readThread(void)
     size_t nRead;
     int numBytes;
     int eomReason;
-    int acquireMode;
-    int numAverage;
+    int readFormat;
     asynUser *pasynUser;
     asynInterface *pasynInterface;
     asynOctet *pasynOctet;
@@ -174,7 +173,10 @@ void drvAHxxx::readThread(void)
     epicsFloat64 raw[QE_MAX_INPUTS];
     unsigned char *input=NULL;
     size_t inputSize=0;
+    char ASCIIData[150];
+    char *inPtr;
     size_t nRequested;
+    size_t nExpected;
     static const char *functionName = "readThread";
 
     /* Create an asynUser */
@@ -204,33 +206,47 @@ void drvAHxxx::readThread(void)
             (void)epicsEventWait(acquireStartEvent_);
             lock();
             readingActive_ = 1;
-            numAcquired_ = 0;
-            getIntegerParam(P_AcquireMode, &acquireMode);
-            getIntegerParam(P_NumAverage, &numAverage);
+            getIntegerParam(P_ReadFormat, &readFormat);
         }
-        numBytes = 3;
         if (valuesPerRead_ < 1) valuesPerRead_ = 1;
-        if (AH401Series_) {
-            numChannels_ = 4;
-        } 
-        else {
-            if (resolution_ == 16) numBytes = 2;
+        for (i=0; i<QE_MAX_INPUTS; i++) {
+            raw[i] = 0;
         }
-        nRequested = numBytes * numChannels_ * valuesPerRead_;
-        if (nRequested > inputSize) {
-            if (input) free(input);
-            input = (unsigned char *)malloc(nRequested);
-            inputSize = nRequested;
-        }
-        unlock();
-        pasynManager->lockPort(pasynUser);
-        status = pasynOctet->read(octetPvt, pasynUser, (char *)input, nRequested, 
-                                  &nRead, &eomReason);
-        pasynManager->unlockPort(pasynUser);
-        lock();
-        if ((status == asynSuccess) && (nRead == nRequested) && (eomReason == ASYN_EOM_CNT)) {
-            for (i=0; i<QE_MAX_INPUTS; i++) {
-                raw[i] = 0;
+
+        if (readFormat == QEReadFormatBinary) {
+            numBytes = 3;
+            if (AH401Series_) {
+                numChannels_ = 4;
+            } 
+            else {
+                if (resolution_ == 16) numBytes = 2;
+            }
+            nRequested = numBytes * numChannels_ * valuesPerRead_;
+            if (nRequested > inputSize) {
+                if (input) free(input);
+                input = (unsigned char *)malloc(nRequested);
+                inputSize = nRequested;
+            }
+            unlock();
+            pasynManager->lockPort(pasynUser);
+            status = pasynOctet->read(octetPvt, pasynUser, (char *)input, nRequested, 
+                                      &nRead, &eomReason);
+            pasynManager->unlockPort(pasynUser);
+            lock();
+            if ((status != asynSuccess) || 
+                (nRead  != nRequested)  || 
+                (eomReason != ASYN_EOM_CNT)) {
+                if (status != asynTimeout) {
+                    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, 
+                        "%s:%s: unexpected error reading meter status=%d, nRead=%lu, eomReason=%d\n", 
+                        driverName, functionName, status, (unsigned long)nRead, eomReason);
+                    // We got an error reading the meter, it is probably offline.  
+                    // Wait 1 second before trying again.
+                    unlock();
+                    epicsThreadSleep(1.0);
+                    lock();
+                }
+                continue;
             }
             offset = 0;
             if (AH401Series_) {
@@ -273,27 +289,79 @@ void drvAHxxx::readThread(void)
                     }
                 }
             }
-            if (valuesPerRead_ > 1) {
-                for (i=0; i<numChannels_; i++) {
-                    raw[i] = raw[i] / valuesPerRead_;
-                }
-            }
-            computePositions(raw);
-            numAcquired_++;
-            if ((acquireMode == QEAcquireModeOneShot) &&
-                (numAcquired_ >= numAverage)) {
-                acquiring_ = 0;
-            }
-        } else if (status != asynTimeout) {
-            asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, 
-                "%s:%s: unexpected error reading meter status=%d, nRead=%lu, eomReason=%d\n", 
-                driverName, functionName, status, (unsigned long)nRead, eomReason);
-            // We got an error reading the meter, it is probably offline.  Wait 1 second before trying again.
-            unlock();
-            epicsThreadSleep(1.0);
-            lock();
         }
-    }
+        else {  // ASCII mode
+            nRequested = sizeof(ASCIIData);
+            for (i=0; i<valuesPerRead_; i++) {
+                unlock();
+                pasynManager->lockPort(pasynUser);
+                status = pasynOctet->read(octetPvt, pasynUser, ASCIIData, nRequested, 
+                                          &nRead, &eomReason);
+                pasynManager->unlockPort(pasynUser);
+                lock();
+                if ((status != asynSuccess) || 
+                    (eomReason != ASYN_EOM_EOS)) {
+                    if (status != asynTimeout) {
+                        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, 
+                            "%s:%s: unexpected error reading meter status=%d, nRead=%lu, eomReason=%d\n", 
+                            driverName, functionName, status, (unsigned long)nRead, eomReason);
+                        // We got an error reading the meter, it is probably offline.  
+                        // Wait 1 second before trying again.
+                        unlock();
+                        epicsThreadSleep(1.0);
+                        lock();
+                    }
+                    continue;
+                }
+                if (AH501Series_) {
+                    nExpected = (resolution_/4)*numChannels_ + (numChannels_-1);
+                    if (strstr(ASCIIData, "ACK") != 0) {
+                        // The requested number of trigger samples has been received
+                        break;
+                    } 
+                    if (nRead != nExpected) {
+                        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, 
+                            "%s:%s: error reading meter nRead=%lu, expected %lu, input=%s\n", 
+                            driverName, functionName, (unsigned long)nRead, (unsigned long)nExpected, ASCIIData);
+                        continue;
+                    }
+                    inPtr = ASCIIData;
+                    for (j=0; j<numChannels_; j++) {
+                        value = strtol(inPtr, &inPtr, 16);
+                        if (resolution_ == 16) {
+                            if (value <= 32767) {
+                                value = -value;
+                            } else {
+                                value = 65536 - value;
+                            }
+                        }
+                        else {
+                           if (value <= 8388607) {
+                                value = -value;
+                            } else {
+                                value = 16777216 - value;
+                            }
+                        }
+                        raw[j] += value;
+                    }
+                }
+                else if (AH401Series_) {
+                    inPtr = ASCIIData;
+                    for (j=0; j<numChannels_; j++) {
+                        value = strtol(inPtr, &inPtr, 10);
+                        raw[j] += value;
+                    }
+                }
+            }  // end for valuesPerRead
+        }  // end if ASCII mode
+
+        if (valuesPerRead_ > 1) {
+            for (i=0; i<numChannels_; i++) {
+                raw[i] = raw[i] / valuesPerRead_;
+            }
+        }
+        computePositions(raw);
+    } //end while(1)
 }
 
 asynStatus drvAHxxx::reset()
@@ -349,13 +417,15 @@ asynStatus drvAHxxx::setAcquire(epicsInt32 value)
     int triggerMode;
     int numAverage;
     int numAcquire;
+    int readFormat;
     int acquireMode;
     char dummyIn[MAX_COMMAND_LEN];
     static const char *functionName = "setAcquire";
     
     getIntegerParam(P_TriggerMode, &triggerMode);
     getIntegerParam(P_AcquireMode, &acquireMode);
-    getIntegerParam(P_NumAverage, &numAverage);
+    getIntegerParam(P_NumAverage,  &numAverage);
+    getIntegerParam(P_ReadFormat,  &readFormat);
 
     // Make sure the input EOS is set
     status = pasynOctetSyncIO->setInputEos(pasynUserMeter_, "\r\n", 2);
@@ -369,7 +439,7 @@ asynStatus drvAHxxx::setAcquire(epicsInt32 value)
     if (value == 0) {
         // We assume that if acquiring_=0, readingActive_=0 and acquireMode=one shot that the meter stopped itself
         // and we don't need to do anything further.  This really speeds things up.
-        if ((acquiring_ == 0) && (readingActive_ == 0) && (acquireMode == QEAcquireModeOneShot)) 
+        if ((acquiring_ == 0) && (readingActive_ == 0) && (acquireMode == QEAcquireModeSingle)) 
             return asynSuccess;
 
         // Setting this flag tells the read thread to stop
@@ -377,7 +447,7 @@ asynStatus drvAHxxx::setAcquire(epicsInt32 value)
         // Wait for the read thread to stop
         while (readingActive_) {
             unlock();
-            epicsThreadSleep(0.1);
+            epicsThreadSleep(0.01);
             lock();
         }
         while (1) {
@@ -398,16 +468,25 @@ asynStatus drvAHxxx::setAcquire(epicsInt32 value)
             // Now do flush and read with short timeout to flush any responses
             nread = 0;
             readStatus = pasynOctetSyncIO->flush(pasynUserMeter_);
-            readStatus = pasynOctetSyncIO->read(pasynUserMeter_, dummyIn, MAX_COMMAND_LEN, .5, &nread, &eomReason);
+            readStatus = pasynOctetSyncIO->read(pasynUserMeter_, dummyIn, MAX_COMMAND_LEN, AHxxx_TIMEOUT, &nread, &eomReason);
             if ((readStatus == asynTimeout) && (nread == 0)) break;
         }
+        // Call the base class function in case anything needs to be done there.
+        drvQuadEM::setAcquire(0);        
     } else {
-        // Make sure the meter is in binary mode
-        strcpy(outString_, "BIN ON");
+        // Call the base class function because it handles some common tasks.
+        drvQuadEM::setAcquire(1);
+
+        // Put the device in the appropriate mode
+        if (readFormat == QEReadFormatBinary) {
+            strcpy(outString_, "BIN ON");
+        } else {
+            strcpy(outString_, "BIN OFF");
+        }
         writeReadMeter();
         
         // If we are in one-shot mode then send NAQ to request specific number of samples
-        if (acquireMode == QEAcquireModeOneShot) {
+        if (acquireMode == QEAcquireModeSingle) {
             numAcquire = numAverage;
         } else {
             numAcquire = 0;
@@ -430,7 +509,9 @@ asynStatus drvAHxxx::setAcquire(epicsInt32 value)
             status = pasynOctetSyncIO->write(pasynUserMeter_, "ACQ ON", strlen("ACQ ON"), 
                         AHxxx_TIMEOUT, &nwrite);
         }
-        status = pasynOctetSyncIO->setInputEos(pasynUserMeter_, "", 0);
+        if (readFormat == QEReadFormatBinary) {
+            status = pasynOctetSyncIO->setInputEos(pasynUserMeter_, "", 0);
+        }
         // Notify the read thread if acquisition status has started
         epicsEventSignal(acquireStartEvent_);
         acquiring_ = 1;
@@ -536,6 +617,23 @@ asynStatus drvAHxxx::setResolution(epicsInt32 value)
     return status;
 }
 
+/** Sets the read format
+  * \param[in] value Read format (QEReadFormatBinary or QEReadFormatASCII).
+  */
+asynStatus drvAHxxx::setReadFormat(epicsInt32 value) 
+{
+    asynStatus status;
+    
+    // Put the device in the appropriate mode
+    if (value == QEReadFormatBinary) {
+        strcpy(outString_, "BIN ON");
+    } else {
+        strcpy(outString_, "BIN OFF");
+    }
+    status = sendCommand();
+    return status;
+}
+
 /** Reads all the settings back from the electrometer.
   */
 asynStatus drvAHxxx::readStatus() 
@@ -543,10 +641,12 @@ asynStatus drvAHxxx::readStatus()
     // Reads the values of all the meter parameters, sets them in the parameter library
     int range, resolution, pingPong, numChannels, biasState, numAverage;
     double integrationTime, biasVoltage;
+    int readFormat;
     int prevAcquiring;
     double sampleTime=0., averagingTime;
     static const char *functionName = "getStatus";
     
+    getIntegerParam(P_ReadFormat,  &readFormat);
     prevAcquiring = acquiring_;
     if (prevAcquiring) setAcquire(0);
 
@@ -588,6 +688,41 @@ asynStatus drvAHxxx::readStatus()
         // Compute the sample time.  This is a function of the resolution and number of channels
         sampleTime = 38.4e-6 * numChannels;
         if (resolution == 24) sampleTime = sampleTime * 2.;
+        // Compute the sample time.  This is a function of the resolution and number of channels
+        if (readFormat == QEReadFormatBinary) {
+            sampleTime = 38.4e-6 * numChannels;
+            if (resolution == 24) sampleTime = sampleTime * 2.0;
+        }
+        else {
+            switch (resolution) {
+                case 16:
+                    switch (numChannels) {
+	                      case 1:
+                            sampleTime = 384e-6;
+                            break;
+	                      case 2:
+	                          sampleTime = 806.4e-6;
+                            break;
+                        case 4:
+	                          sampleTime = 1.6128e-3;
+                            break;
+                    }
+                    break;
+                case 24:
+                    switch (numChannels) {
+	                      case 1:
+                            sampleTime = 499.2e-6;
+                            break;
+	                      case 2:
+	                          sampleTime = 998.4e-6;
+                            break;
+                        case 4:
+	                          sampleTime = 1.9968e-3;
+                            break;
+                    }
+                    break;
+            }
+        }
     }
     if ((model_ == QE_ModelAH501C) || (model_ == QE_ModelAH501D)) {
         strcpy(outString_, "HVS ?");

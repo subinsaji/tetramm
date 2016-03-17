@@ -1,14 +1,3 @@
-errlogInit(5000)
-< envPaths
-
-# Tell EPICS all about the record types, device-support modules, drivers,
-# etc. in this build
-dbLoadDatabase("../../dbd/quadEMTestApp.dbd")
-quadEMTestApp_registerRecordDeviceDriver(pdbbase)
-
-# The search path for database files
-epicsEnvSet("EPICS_DB_INCLUDE_PATH", "$(ADCORE)/db")
-
 epicsEnvSet("PREFIX",    "quadEMTest:")
 epicsEnvSet("RECORD",    "TetrAMM")
 epicsEnvSet("PORT",      "TetrAMM")
@@ -16,7 +5,7 @@ epicsEnvSet("TEMPLATE",  "TetrAMM")
 epicsEnvSet("QSIZE",     "20")
 epicsEnvSet("RING_SIZE", "10000")
 epicsEnvSet("TSPOINTS",  "1000")
-epicsEnvSet("IP",        "164.54.160.241:10001")
+epicsEnvSet("IP",        "gse-tetramm2:10001")
 
 #drvAsynIPPortConfigure("portName","hostInfo",priority,noAutoConnect,
 #                        noProcessEos)
@@ -34,10 +23,9 @@ asynSetTraceIOTruncateSize("IP_$(PORT)", 0, 4000)
 dbLoadRecords("$(ASYN)/db/asynRecord.db", "P=$(PREFIX), R=asyn1,PORT=IP_$(PORT),ADDR=0,OMAX=256,IMAX=256")
 
 drvTetrAMMConfigure("$(PORT)", "IP_$(PORT)", $(RING_SIZE))
-dbLoadRecords("$(QUADEM)/quadEMApp/Db/quadEM.template",      "P=$(PREFIX), R=$(RECORD):, PORT=$(PORT)")
-dbLoadRecords("$(QUADEM)/quadEMApp/Db/$(TEMPLATE).template", "P=$(PREFIX), R=$(RECORD):, PORT=$(PORT)")
+dbLoadRecords("$(QUADEM)/db/$(TEMPLATE).template", "P=$(PREFIX), R=$(RECORD):, PORT=$(PORT)")
 
-< commonPlugins.cmd
+< $(QUADEM)/iocBoot/commonPlugins.cmd
 
 asynSetTraceIOMask("$(PORT)",0,2)
 #asynSetTraceMask("$(PORT)",  0,9)
@@ -50,9 +38,9 @@ asynSetTraceIOMask("$(PORT)",0,2)
 #  dataString  = drvInfo string for current and position data
 #  intervalString  = drvInfo string for time interval per point
 initFastSweep("$(PORT)TS", "$(PORT)", 11, 2048, "QE_INT_ARRAY_DATA", "QE_SAMPLE_TIME")
-dbLoadRecords("$(QUADEM)/quadEMApp/Db/quadEM_TimeSeries.template", "P=$(PREFIX),R=$(RECORD)_TS:,NUM_TS=2048,NUM_FREQ=1024,PORT=$(PORT)TS")
+dbLoadRecords("$(QUADEM)/db/quadEM_TimeSeries.template", "P=$(PREFIX),R=$(RECORD)_TS:,NUM_TS=2048,NUM_FREQ=1024,PORT=$(PORT)TS")
 
-< saveRestore.cmd
+< $(QUADEM)/iocBoot/saveRestore.cmd
 
 iocInit()
 

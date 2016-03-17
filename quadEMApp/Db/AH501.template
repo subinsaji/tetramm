@@ -1,6 +1,7 @@
-# Database for Elettra AH401B picoammeter
+# Database for CaenEls AH501 electrometer
 #   Mark Rivers
 #   June 3, 2012
+
 
 # Macros:
 #% macro, P, Device Prefix
@@ -9,6 +10,7 @@
 
 # This associates the template with an edm screen
 # % guiTODO, $(PORT), edmtab, AH501.edl, P=$(P),R=$(R)
+include "quadEM.template"
 
 # We replace the choices for the Range
 record(mbbo,"$(P)$(R)Range") {
@@ -32,15 +34,15 @@ record(mbbi,"$(P)$(R)Range_RBV") {
 # We replace the choices for the TriggerMode
 record(mbbo,"$(P)$(R)TriggerMode") {
     field(ZRVL, "0")
-    field(ZRST, "Internal")
-    field(ONVL, "2")
+    field(ZRST, "Free run")
+    field(ONVL, "4")
     field(ONST, "Ext. gate")
 }
 
 record(mbbi,"$(P)$(R)TriggerMode_RBV") {
     field(ZRVL, "0")
-    field(ZRST, "Internal")
-    field(ONVL, "2")
+    field(ZRST, "Free run")
+    field(ONVL, "4")
     field(ONST, "Ext. gate")
 }
 
