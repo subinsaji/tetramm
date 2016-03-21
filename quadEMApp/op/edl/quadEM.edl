@@ -3,8 +3,8 @@ beginScreenProperties
 major 4
 minor 0
 release 1
-x 559
-y 169
+x 1455
+y 135
 w 393
 h 824
 font "arial-bold-r-12.0"
@@ -1844,8 +1844,8 @@ beginObjectProperties
 major 4
 minor 1
 release 1
-x 260
-y 610
+x 255
+y 600
 w 102
 h 121
 font "arial-bold-r-10.0"
@@ -2320,5 +2320,42 @@ fgAlarm
 bgColor index 3
 fill
 font "arial-bold-r-12.0"
+endObjectProperties
+
+# (Textentry)
+object TextentryClass
+beginObjectProperties
+major 10
+minor 0
+release 0
+x 305
+y 730
+w 75
+h 20
+controlPv "$(P)$(R)Geometry"
+fgColor index 25
+fgAlarm
+bgColor index 3
+fill
+font "arial-bold-r-12.0"
+endObjectProperties
+
+# (Static Text)
+object activeXTextClass
+beginObjectProperties
+major 4
+minor 1
+release 1
+x 255
+y 730
+w 55
+h 20
+font "arial-bold-r-12.0"
+fgColor index 14
+bgColor index 3
+useDisplayBg
+value {
+  "Geom."
+}
 endObjectProperties
 
