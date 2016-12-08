@@ -30,7 +30,7 @@
 #include <epicsExport.h>
 #include "drvTetrAMM.h"
 
-#define TetrAMM_TIMEOUT 0.01
+#define TetrAMM_TIMEOUT 0.05
 #define MIN_VALUES_PER_READ_BINARY 5
 #define MIN_VALUES_PER_READ_ASCII 500
 #define MAX_VALUES_PER_READ 100000
@@ -285,6 +285,12 @@ void drvTetrAMM::readThread(void)
                     }
                     nextExpectedEdge = 0;
                     break;
+                case 0xfff40003ffffffffll:
+                    // This is a signaling Nan when the acquistion was stopped
+                    asynPrint(pasynUserSelf, ASYN_TRACEIO_DRIVER,
+                            "%s::%s: seen acq done sNaN (0xfff40003ffffffffll)\n",
+                            driverName, functionName);
+                    break;
                 default: 
                     // We have lost sync, probably due to a dropped packet.
                     // Recover sync by reading 2 times length per sample, which is enough to guarantee that
@@ -518,34 +524,29 @@ asynStatus drvTetrAMM::setAcquireParams()
     int valuesPerRead;
     int readFormat;
     int naq;
+    int ntrg;
     int range;
     int numChannels;
     int triggerMode;
+    int triggerPolarity;
     double sampleTime;
     double averagingTime;
     int prevAcquiring;
-    static const char *functionName = "setAcquireParams";
+    int numAcquire;
+    //static const char *functionName = "setAcquireParams";
 
     prevAcquiring = acquiring_;
     if (prevAcquiring) setAcquire(0);
 
-    getIntegerParam(P_Range,         &range);
-    getIntegerParam(P_NumChannels,   &numChannels);
-    getIntegerParam(P_TriggerMode,   &triggerMode);
-    getIntegerParam(P_AcquireMode,   &acquireMode);
-    getIntegerParam(P_ValuesPerRead, &valuesPerRead);
-    getIntegerParam(P_ReadFormat,    &readFormat);
-    getDoubleParam (P_AveragingTime, &averagingTime);
-
-    // Certain combinations are not yet supported
-    if ((triggerMode == QETriggerModeExtTrigger) &&
-        ((acquireMode == QEAcquireModeContinuous) ||
-         (acquireMode == QEAcquireModeMultiple))) {
-        asynPrint(pasynUserSelf, ASYN_TRACE_ERROR,
-            "%s::%s Error, TriggerMode=External Trigger is currently only supported for AcquireMode=One-Shot\n",
-            driverName, functionName);
-        return asynError;
-    }
+    getIntegerParam(P_Range,            &range);
+    getIntegerParam(P_NumChannels,      &numChannels);
+    getIntegerParam(P_TriggerMode,      &triggerMode);
+    getIntegerParam(P_TriggerPolarity,  &triggerPolarity);
+    getIntegerParam(P_AcquireMode,      &acquireMode);
+    getIntegerParam(P_ValuesPerRead,    &valuesPerRead);
+    getIntegerParam(P_ReadFormat,       &readFormat);
+    getDoubleParam (P_AveragingTime,    &averagingTime);
+    getIntegerParam(P_NumAcquire,       &numAcquire);
 
     // Compute the sample time.  This is 10 microseconds times valuesPerRead. 
     sampleTime = 10e-6 * valuesPerRead;
@@ -588,16 +589,27 @@ asynStatus drvTetrAMM::setAcquireParams()
     sprintf(outString_, "TRG:%s", (triggerMode == QETriggerModeFreeRun) ? "OFF" : "ON");
     writeReadMeter();
 
+    // Send the TRGPOL:POS or TRGPOL:NEG command
+    sprintf(outString_, "TRGPOL:%s", (triggerPolarity == QETriggerPolarityPositive) ? "POS" : "NEG");
+    writeReadMeter();
+
     // Send the NAQ command
     naq = 0;
-    if (((triggerMode == QETriggerModeExtTrigger) || 
-         (triggerMode == QETriggerModeFreeRun)) && 
-         (acquireMode == QEAcquireModeSingle)) {
+    if ((triggerMode == QETriggerModeExtTrigger) || 
+       ((triggerMode == QETriggerModeFreeRun) && 
+        (acquireMode == QEAcquireModeSingle))) {
         naq = numAverage;
     }        
     sprintf(outString_, "NAQ:%d", naq);
     writeReadMeter();
     
+    // Send the NTRG command (NTRG command does not affect continuous mode)
+    ntrg = 0;
+    if (acquireMode == QEAcquireModeSingle) ntrg = 1;
+    else if (acquireMode == QEAcquireModeMultiple) ntrg = numAcquire;
+    sprintf(outString_, "NTRG:%d", ntrg);
+    writeReadMeter();
+
     if (prevAcquiring) setAcquire(1);    
     return asynSuccess;
 }
@@ -704,6 +716,15 @@ asynStatus drvTetrAMM::setReadFormat(epicsInt32 value)
   *                  2 = external gate.
   */
 asynStatus drvTetrAMM::setTriggerMode(epicsInt32 value)
+{
+    return setAcquireParams();
+}
+
+/** Sets the trigger polarity
+  * \param[in] value 0 = rising edge,
+  *                  1 = falling edge
+  */
+asynStatus drvTetrAMM::setTriggerPolarity(epicsInt32 value)
 {
     return setAcquireParams();
 }

@@ -22,8 +22,9 @@ INC += drvQuadEM.h
 quadEM_SRCS         += drvQuadEM.cpp
 quadEM_SRCS         += drvAHxxx.cpp
 quadEM_SRCS         += drvTetrAMM.cpp
-quadEM_SRCS         += quadEM_SNL.st
-quadEM_SRCS         += four1.c
+#quadEM_SRCS         += quadEM_SNL.st
+quadEM_SRCS         += drvNSLS_EM.cpp
+#quadEM_SRCS         += four1.c
 #quadEM_SRCS_vxWorks += drvAPS_EM.cpp
 
 #quadEM_LIBS_vxWorks += Ipac
@@ -59,3 +60,4 @@ include $(TOP)/configure/RULES
 #----------------------------------------
 #  ADD RULES AFTER THIS LINE
 
+#$(COMMON_DIR)/quadEMTestAppVx.dbd : $(COMMON_DIR)/$(PROD_NAME).dbd
